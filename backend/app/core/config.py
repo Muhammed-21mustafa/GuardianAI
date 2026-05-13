@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     
     # Environment Variables
     GEMINI_API_KEY: str = ""
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/guardian_db"
-
+    GEMINI_MODEL_VISION: str = "gemini-2.5-flash" # Use flash for fast multimodal reasoning
+    
     class Config:
         env_file = ".env"
 

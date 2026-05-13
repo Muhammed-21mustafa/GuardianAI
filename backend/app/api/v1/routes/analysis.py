@@ -1,46 +1,45 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any
-from app.agents.graph import app_graph
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse
+from app.schemas.analysis import AnalysisResponse
+from app.agents.graph import guardian_pipeline
+from app.core.exceptions import InvalidImageError
 
 router = APIRouter()
 
-class AnalysisRequest(BaseModel):
-    case_id: str
-    original_product_info: str
-    return_image_data: str
-
-class AnalysisResponse(BaseModel):
-    case_id: str
-    fraud_score: float
-    analysis_reasoning: str
-    action_taken: str
-    report_draft: str
-
-@router.post("/analyze", response_model=AnalysisResponse)
-async def analyze_return(request: AnalysisRequest):
+@router.post("/analyze-return", response_model=AnalysisResponse)
+async def analyze_return_endpoint(
+    original_image: UploadFile = File(...),
+    returned_image: UploadFile = File(...)
+):
     """
-    Starts the agentic pipeline to analyze a return case.
+    POST /api/v1/analyze-return
+    Takes two images (multipart/form-data) and runs the GuardianAI Agentic Pipeline.
     """
+    
+    # 1. Validate inputs
+    if not original_image.content_type.startswith('image/') or not returned_image.content_type.startswith('image/'):
+        raise InvalidImageError("Both files must be valid images.")
+
     try:
-        # Initial state for LangGraph
-        initial_state = {
-            "case_id": request.case_id,
-            "original_product_info": request.original_product_info,
-            "return_image_data": request.return_image_data
-        }
-        
-        # Run the graph
-        # For LangGraph 0.1.x, invoke() is typically used. 
-        # Using a simple synchronous invoke for MVP.
-        final_state = app_graph.invoke(initial_state)
-        
-        return AnalysisResponse(
-            case_id=final_state.get("case_id"),
-            fraud_score=final_state.get("fraud_score", 0.0),
-            analysis_reasoning=final_state.get("analysis_reasoning", ""),
-            action_taken=final_state.get("action_taken", ""),
-            report_draft=final_state.get("report_draft", "")
-        )
+        orig_bytes = await original_image.read()
+        ret_bytes = await returned_image.read()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise InvalidImageError(f"Failed to read image bytes: {str(e)}")
+
+    # 2. Build Initial State
+    initial_state = {
+        "original_image_bytes": orig_bytes,
+        "returned_image_bytes": ret_bytes
+    }
+
+    # 3. Invoke LangGraph Pipeline
+    try:
+        final_state = guardian_pipeline.invoke(initial_state)
+        result_dict = final_state.get("final_result", {})
+        
+        # 4. Return Structured Output
+        return AnalysisResponse(**result_dict)
+        
+    except Exception as e:
+        # Pass exception to centralized handler
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")

@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.exceptions import GuardianException, guardian_exception_handler
+from app.api.v1.routes import analysis
 
 app = FastAPI(
     title="GuardianAI API",
@@ -10,17 +12,19 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify frontend URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Exception Handlers
+app.add_exception_handler(GuardianException, guardian_exception_handler)
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok", "service": "GuardianAI Backend"}
 
-# Import and include routers here later
-from app.api.v1.routes import analysis
-app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["analysis"])
+# Include routers
+app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
