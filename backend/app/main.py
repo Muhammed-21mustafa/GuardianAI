@@ -22,5 +22,5 @@ async def health_check():
     return {"status": "ok", "service": "GuardianAI Backend"}
 
 # Import and include routers here later
-# from app.api.v1.routes import analysis
-# app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["analysis"])
+from app.api.v1.routes import analysis
+app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["analysis"])
