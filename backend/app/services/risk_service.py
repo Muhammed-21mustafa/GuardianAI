@@ -11,8 +11,10 @@ class RiskService:
         score = 0
         
         # Base points by severity count
+        has_critical = False
         for mismatch in report.mismatches:
             if mismatch.severity == "critical":
+                has_critical = True
                 score += 50
             elif mismatch.severity == "high":
                 score += 30
@@ -21,8 +23,11 @@ class RiskService:
             elif mismatch.severity == "low":
                 score += 5
                 
-        # Cap score at 100
-        score = min(score, 100)
+        if has_critical:
+            score = 100
+        else:
+            # Cap score at 100
+            score = min(score, 100)
         
         # Determine risk level
         if score == 0:
