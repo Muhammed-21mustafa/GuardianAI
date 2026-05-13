@@ -6,37 +6,52 @@ class RiskService:
     def calculate_risk(report: VerificationReport) -> Tuple[int, str]:
         """
         Calculates risk score (0-100) and risk level based on the verification report.
+        Uses a weighted scoring system for granular risk assessment.
         Returns: (risk_score, risk_level)
         """
         score = 0
+        is_completely_different_product = False
         
-        # Base points by severity count
-        has_critical = False
+        # Weighted points by field
         for mismatch in report.mismatches:
-            if mismatch.severity == "critical":
-                has_critical = True
-                score += 50
-            elif mismatch.severity == "high":
-                score += 30
-            elif mismatch.severity == "medium":
+            if mismatch.field == "product_type":
+                if mismatch.severity == "critical":
+                    is_completely_different_product = True
+                else:
+                    score += 70
+            elif mismatch.field == "condition":
+                score += 25
+            elif mismatch.field == "color":
+                score += 25
+            elif mismatch.field == "visible_damage":
+                score += 20
+            elif mismatch.field == "accessories":
                 score += 15
-            elif mismatch.severity == "low":
-                score += 5
+            elif mismatch.field == "packaging_status":
+                score += 10
+            elif mismatch.field == "label_status":
+                score += 10
+            else:
+                # Fallback for unexpected fields based on severity
+                if mismatch.severity == "high":
+                    score += 30
+                elif mismatch.severity == "medium":
+                    score += 15
+                elif mismatch.severity == "low":
+                    score += 5
                 
-        if has_critical:
+        if is_completely_different_product:
             score = 100
         else:
             # Cap score at 100
             score = min(score, 100)
         
-        # Determine risk level
-        if score == 0:
+        # Determine risk level based on new thresholds
+        if score <= 25:
             level = "low"
-        elif score < 40:
-            level = "low"
-        elif score < 70:
+        elif score <= 60:
             level = "medium"
-        elif score < 90:
+        elif score <= 85:
             level = "high"
         else:
             level = "critical"
