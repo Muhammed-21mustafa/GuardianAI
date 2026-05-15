@@ -14,11 +14,12 @@ class RiskService:
         
         # Weighted points by field
         for mismatch in report.mismatches:
+            if mismatch.severity == "critical":
+                is_completely_different_product = True
+                break
+                
             if mismatch.field == "product_type":
-                if mismatch.severity == "critical":
-                    is_completely_different_product = True
-                else:
-                    score += 70
+                score += 70
             elif mismatch.field == "condition":
                 score += 25
             elif mismatch.field == "color":
