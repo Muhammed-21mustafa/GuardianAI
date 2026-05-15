@@ -32,6 +32,7 @@ def decision_agent_node(state: dict) -> dict:
     overall_confidence = (orig_analysis.confidence + ret_analysis.confidence) / 2.0
 
     return {
+        "decision_trace": thought_trace,
         "final_result": {
             "risk_score": risk_score,
             "risk_level": risk_level,
@@ -40,6 +41,7 @@ def decision_agent_node(state: dict) -> dict:
             "recommended_action": recommended_action,
             "confidence": overall_confidence,
             "manual_review_required": manual_review,
-            "thought_trace": thought_trace
+            # thought_trace will be built by ResolutionAgent
+            "thought_trace": "" 
         }
     }

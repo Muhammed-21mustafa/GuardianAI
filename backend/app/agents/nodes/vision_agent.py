@@ -23,7 +23,11 @@ def vision_agent_node(state: dict) -> dict:
         returned_img, "the product returned by the customer"
     )
 
+    # Create trace
+    trace = f"Extracted visual features. Original product type: '{orig_analysis.product_type}', Returned product type: '{ret_analysis.product_type}'."
+
     return {
         "original_analysis": orig_analysis,
-        "returned_analysis": ret_analysis
+        "returned_analysis": ret_analysis,
+        "vision_trace": trace
     }

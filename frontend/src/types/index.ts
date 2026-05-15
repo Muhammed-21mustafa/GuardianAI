@@ -15,4 +15,12 @@ export interface AnalysisResponse {
     confidence: number;
     manual_review_required: boolean;
     thought_trace: string;
+    case_id: string;
+    case_status: string;
+    case_priority: string;
+    evidence_summary: string;
+    automated_action_log: string[];
+    recommended_next_step: string;
+    dispute_report_summary: string;
+    estimated_financial_impact: string;
 }

@@ -10,6 +10,11 @@ def verification_agent_node(state: dict) -> dict:
     # Run comparison logic
     report = verification_service.compare_analyses(orig_analysis, ret_analysis)
     
+    # Create trace
+    mismatch_count = len(report.mismatches)
+    trace = f"Compared analyses. Found {mismatch_count} discrepancies. Overall severity: {report.overall_severity.upper()}."
+
     return {
-        "verification_report": report
+        "verification_report": report,
+        "verification_trace": trace
     }

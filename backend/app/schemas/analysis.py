@@ -34,3 +34,13 @@ class AnalysisResponse(BaseModel):
     confidence: float = Field(description="Overall confidence in the decision", ge=0.0, le=1.0)
     manual_review_required: bool = Field(description="Flag indicating if a human should review")
     thought_trace: str = Field(description="AI's reasoning chain")
+    
+    # --- Case Management Extensions ---
+    case_id: str = Field(description="Unique case identifier")
+    case_status: str = Field(description="Current status of the case")
+    case_priority: str = Field(description="Priority level of the case")
+    evidence_summary: str = Field(description="Summary of the evidence collected")
+    automated_action_log: List[str] = Field(description="List of actions automatically taken by the system")
+    recommended_next_step: str = Field(description="Next recommended step for human operators")
+    dispute_report_summary: str = Field(description="Draft summary for the dispute report")
+    estimated_financial_impact: str = Field(description="Estimated financial value at risk")
