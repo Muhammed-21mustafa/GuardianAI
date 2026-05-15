@@ -424,8 +424,10 @@ export default function Dashboard() {
                     )}
 
                     <div>
-                      <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-2">İtiraz Raporu Özeti</p>
-                      <p className="text-sm text-zinc-400 italic border-l-2 border-zinc-700 pl-3.5 py-1">{result.dispute_report_summary}</p>
+                      <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-2">Resmi İtiraz / Hakem Heyeti Dilekçesi</p>
+                      <div className="text-sm text-zinc-400 border-l-2 border-zinc-700 pl-3.5 py-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 whitespace-pre-wrap">
+                        {result.dispute_report_summary}
+                      </div>
                     </div>
                   </div>
                 </div>

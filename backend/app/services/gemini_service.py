@@ -41,4 +41,17 @@ class GeminiService:
         except Exception as e:
             raise LLMProcessingError(f"Gemini analysis failed: {str(e)}")
 
+    def generate_text(self, prompt: str) -> str:
+        """
+        Generates raw text using Gemini.
+        """
+        try:
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            raise LLMProcessingError(f"Gemini text generation failed: {str(e)}")
+
 gemini_service = GeminiService()

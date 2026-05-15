@@ -41,17 +41,35 @@ def resolution_agent_node(state: dict) -> dict:
     action_log = []
     dispute_summary = "İtiraz raporu oluşturulmasına gerek yoktur."
     
+    if risk_level in ["critical", "high"]:
+        try:
+            from app.services.gemini_service import gemini_service
+            mismatch_str = "\n".join([f"- {m.field}: {m.description}" for m in report.mismatches])
+            prompt = f"""
+Sen e-ticaret satıcıları (KOBİ'ler) için çalışan profesyonel bir Hukuk ve Operasyon danışmanısın.
+Amazon/Trendyol/Hepsiburada gibi bir pazar yerine (Marketplace) sunulmak üzere resmi bir iade itiraz (dispute/claim) dilekçesi/raporu yazmalısın.
+
+Vaka Detayları:
+Risk Seviyesi: {risk_level.upper()}
+Uyuşmazlıklar:
+{mismatch_str}
+
+Lütfen son derece resmi, kurumsal ve hukuki bir dille, satıcının haklı olduğunu savunan, bu iadenin neden reddedildiğini ve para iadesinin (refund) neden satıcı lehine bloke edilmesi gerektiğini açıklayan kapsamlı ama net bir itiraz raporu yaz. (Örn: 'Sayın Platform Yetkilisi...' diye başlayıp, hukuki ve operasyonel kanıtları vurgula). Tamamen Türkçe olsun. Markdown formatında yaz.
+            """
+            generated_letter = gemini_service.generate_text(prompt)
+            dispute_summary = generated_letter
+        except Exception:
+            dispute_summary = f"GuardianAI sistemi kritik anomaliler tespit etmiştir (Skor: {final_result.get('risk_score')}). Otomatik dilekçe oluşturulamadı."
+
     if risk_level == "critical":
         case_status = "İNCELEME_İÇİN_BEKLETİLİYOR"
         action_log.extend(["İade işlemi anında bloke edildi", "Mahkemeye/Pazar yerine sunulmak üzere delil paketi oluşturuldu", "Vaka acil olarak operasyon ekibine devredildi"])
-        dispute_summary = f"GuardianAI yapay zeka sistemi kritik anomaliler tespit etmiştir (Skor: {final_result.get('risk_score')}). İade edilen ürün orijinalinden tamamen farklı veya kasıtlı manipüle edilmiştir. Finansal koruma için para iadesi bloke edilmiştir."
         recommended_next_step = "Delil paketini gözden geçirin ve pazaryerine itiraz sürecini başlatın."
         resolution_trace = "Kritik dolandırıcılık tespiti! Vaka üst yönetime iletildi. İtiraz paketi hazırlandı ve iade iptal edildi."
         
     elif risk_level == "high":
         case_status = "AKSİYON_BEKLENİYOR"
         action_log.extend(["İade işlemi askıya alındı", "Süpervizör kontrolü için işaretlendi"])
-        dispute_summary = "Yüksek dolandırıcılık veya ağır hasar riski tespit edildi. İşleme devam edilmeden önce insan doğrulaması şarttır."
         recommended_next_step = "Tespit edilen anomalileri fotoğraflardan manuel olarak doğrulayın."
         resolution_trace = "Yüksek anomaliler saptandı. İkincil kontrol için operasyon ekibine iletildi."
         
