@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse
 from app.schemas.analysis import AnalysisResponse
 from app.agents.graph import guardian_pipeline
@@ -9,7 +9,8 @@ router = APIRouter()
 @router.post("/analyze-return", response_model=AnalysisResponse)
 async def analyze_return_endpoint(
     original_image: UploadFile = File(...),
-    returned_image: UploadFile = File(...)
+    returned_image: UploadFile = File(...),
+    customer_claim: str = Form(default="")
 ):
     """
     POST /api/v1/analyze-return
@@ -29,7 +30,8 @@ async def analyze_return_endpoint(
     # 2. Build Initial State
     initial_state = {
         "original_image_bytes": orig_bytes,
-        "returned_image_bytes": ret_bytes
+        "returned_image_bytes": ret_bytes,
+        "customer_claim": customer_claim
     }
 
     # 3. Invoke LangGraph Pipeline

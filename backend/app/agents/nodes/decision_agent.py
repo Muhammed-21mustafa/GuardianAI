@@ -2,30 +2,28 @@ from app.services.risk_service import risk_service
 
 def decision_agent_node(state: dict) -> dict:
     """
-    Node 3: Calculates final risk score, determines actions, and formulates thought trace.
+    Node 3: The Decision Agent. Evaluates the verification report and calculates risk.
     """
     report = state.get("verification_report")
     orig_analysis = state.get("original_analysis")
     ret_analysis = state.get("returned_analysis")
-    
-    # 1. Calculate Risk
+    customer_claim = state.get("customer_claim", "")
+
+    # Calculate risk score and action
     risk_score, risk_level = risk_service.calculate_risk(report)
-    
-    # 2. Determine Action
     recommended_action, manual_review = risk_service.determine_action(risk_level)
-    
-    # 3. Generate Thought Trace (Reasoning Chain)
+
+    # Generate Thought Trace (Reasoning)
     mismatch_fields = [m.field for m in report.mismatches]
     
     if risk_score == 0:
-        thought_trace = "Images matched perfectly. No discrepancies found in condition or product type. Safe to proceed."
-        summary = "Clear Match"
+        thought_trace = f"No discrepancies found. Customer claim '{customer_claim}' aligns with the verified flawless condition. Approved."
+        summary = "Return matches original shipment"
     elif risk_level in ["high", "critical"]:
-        critical_desc = next((m.description for m in report.mismatches if m.severity == "critical"), "Significant discrepancies detected.")
-        thought_trace = f"Detected high-risk mismatches in: {', '.join(mismatch_fields)}. {critical_desc} Risk score elevated due to critical mismatch findings."
-        summary = "High Fraud Probability"
+        thought_trace = f"Detected high-risk mismatches in: {', '.join(mismatch_fields)}. Customer claimed: '{customer_claim}'. The visual evidence strongly contradicts acceptable return conditions. Risk score elevated."
+        summary = "High Fraud Probability or Severe Damage"
     else:
-        thought_trace = f"Detected minor inconsistencies in {', '.join(mismatch_fields)}. Requires human eyes to confirm acceptability."
+        thought_trace = f"Detected minor inconsistencies in {', '.join(mismatch_fields)}. Customer claimed: '{customer_claim}'. Requires human eyes to confirm acceptability."
         summary = "Potential Wear/Tear or Minor Issue"
 
     # Calculate overall confidence based on vision analysis confidence
