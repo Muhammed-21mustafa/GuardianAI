@@ -1,68 +1,71 @@
-# 🛡️ GuardianAI: Autonomous Security Shield for E-Commerce
+# 🛡️ GuardianAI: AI-Powered Verification Case Management System
 
 <div align="center">
-  <p><strong>890 Milyar Dolarlık İade Krizine KOBİ Odaklı "Otonom Şahit" Çözümü</strong></p>
+  <p><strong>E-Ticaret İade Ekosisteminde Otonom Doğrulama ve Operasyonel Risk Yönetim Platformu</strong></p>
+  <p><em>Hackathon Kazananı (Adayı) - B2B SaaS Prototipi</em></p>
 </div>
 
 ---
 
-## 🛑 Problem: Görünmeyen Tehdidin Anatomisi
-2025 yılı verilerine göre e-ticaret dünyasında **"İade Dolandırıcılığı" (Return Fraud)** ve operasyonel suistimaller her yıl **890 Milyar Dolarlık** devasa bir kayba yol açmaktadır. 
-Özellikle Türkiye e-ticaret pazarının %78'ini oluşturan **KOBİ'ler**, kurumsal devlere kıyasla bu dolandırıcılıktan **%57 daha fazla zarar görmekte** ve çoğu zaman iflas riskiyle karşı karşıya kalmaktadır.
+## 🛑 Problem: Operasyonel Sızıntı ve Ters Lojistik Krizi
+E-ticarette iade artık yalnızca “müşteri memnuniyeti” konusu değil; **operasyon, finans, sahtecilik ve ters lojistik** problemidir. 2024 verilerine göre perakende iadeleri küresel çapta **890 milyar dolara** ulaşmıştır. 
 
-*   **Empty Box Scam / Rock in a Box:** İade kutusundan ürün yerine taş çıkması.
-*   **Return Fraud:** Orijinal ürünün alıkonup, içine sahte/eski ürün konularak iade edilmesi.
-*   **Wardrobing:** Tek seferlik kullanıp "beğenmedim" diyerek geri gönderme (özellikle tekstil ve elektronik).
+Satıcıların asıl ihtiyacı, iade sayısını mucizevi bir şekilde “sıfırlamak” değil; **hangi iadeye ne kadar sürede, hangi kanıtla ve hangi operasyonel aksiyonla yanıt vereceklerini sistematikleştirmektir.** Özellikle Türkiye'de Trendyol (2 gün ret süresi) ve Hepsiburada gibi platformların dar "zaman pencereleri" (SLA), otomasyonun değerini doğrudan görünür kılmaktadır.
 
-Satıcıların elinde iade sürecinin haklılığını kanıtlayacak **manipüle edilemez dijital deliller** bulunmadığı için, platformlar (Amazon, Trendyol vb.) genellikle alıcıyı haklı bulmakta ve KOBİ'ler zarara uğramaktadır.
-
----
-
-## 🚀 Çözüm: GuardianAI ("Otonom Şahit")
-GuardianAI, statik kodlarla çalışan basit bir yazılım değil; fiziksel dünyayı görebilen, muhakeme edebilen ve aksiyon alabilen bir **Agentic Commerce Defense (Yapay Zeka Savunma Ağı)** platformudur. 
-
-Olay anında bir **"Otonom Şahit"** olarak devreye girer. Depo görevlisi iade paketini açtığı an sistemi besler, GuardianAI saniyeler içinde:
-1. İadeyi orijinal kargo verisiyle karşılaştırır.
-2. Sahtekarlığı, eksik aksesuarı veya hasarı tespit eder.
-3. Hukuki ve operasyonel olarak pazar yerlerine sunulmak üzere **Değiştirilemez Delil Paketi (Evidence Package)** ve itiraz raporu (Dispute Report) üretir.
+Küçük ve orta ölçekli satıcılar (KOBİ'ler) için en yüksek zaman tasarrufu üç noktada oluşur:
+1. Düşük riskli iadeleri otomatik ayırma (Triage).
+2. Yüksek riskli vakalarda kanıt paketini (Evidence Package) standartlaştırma.
+3. Çoklu kanal verisini tek bir "Case Management" (Vaka Yönetimi) ekranında toplama.
 
 ---
 
-## 🧠 Nasıl Çalışır? (Multi-Agent Architecture)
-Sistemimiz LangGraph altyapısıyla **4 farklı yapay zeka ajanının (Multi-Agent)** takım çalışmasıyla işler:
+## 🚀 Çözüm: GuardianAI Operasyon Katmanı
+GuardianAI basit bir "fotoğraf doğrulama" aracı değil, uçtan uca bir **Case Management (Vaka Yönetimi)** sistemidir. "Fraud’ı tamamen durduran sihirli değnek" iddiasında bulunmak yerine; görsel kanıt öncelikli çalışan, vakaları önceliklendiren, değiştirilemez kanıt paketleri üreten ve pazar yerlerine (Marketplace) "Dispute" (İtiraz) hazırlığını hızlandıran gerçekçi bir B2B SaaS çözümüdür.
 
-1.  👁️ **Vision Agent (Gözlemci):** Gemini 2.5 Flash Vision modelini kullanarak orijinal ve iade edilen ürün fotoğraflarından piksel piksel "kondisyon, renk, aksesuar, ürün tipi" çıkarımı yapar.
-2.  🔍 **Verification Agent (Doğrulayıcı):** İki veri setini milimetrik olarak çapraz sorgular (Cross-reference) ve uyumsuzlukları (mismatches) şiddetine göre sınıflandırır.
-3.  ⚖️ **Decision Agent (Yargıç):** Weighted Scoring (Ağırlıklı Puanlama) algoritmasıyla 0-100 arası bir Risk Skoru hesaplar. (Örn: Çizik = 15 Puan, Farklı Ürün = 100 Puan/Kritik Risk).
-4.  🎯 **Resolution Agent (Operasyon Şefi):** Kurumsal Case Management (Vaka Yönetimi) sürecini başlatır. Otomatik aksiyonlar alır (örn: İadeyi bloke et), tahmini finansal kaybı hesaplar ve operasyon ekibine nihai raporu sunar.
+### Nasıl Çalışır? (4 Aşamalı Vaka Akışı)
+1. **Case Initiation (Vaka Başlatma):** Hangi pazar yerinden, hangi sebeple ve ne kadarlık bir ürün iade edildiğinin (Bağlam/Context) sisteme girilmesi.
+2. **Evidence Collection (Delil Toplama):** Orijinal ve İade ürün görsellerinin GuardianAI'a yüklenmesi.
+3. **AI Analysis (Otonom İnceleme):** Multi-agent (Çoklu-ajan) yapay zeka sisteminin saniyeler içinde kanıtları çapraz sorgulaması.
+4. **Case Resolution (Vaka Çözümü):** Otomatik itiraz raporu (Dispute Report), risk skoru ve operasyonel aksiyon önerisinin (İadeyi Onayla / Bloke Et) sunulması.
+
+---
+
+## 🧠 Zeka Katmanı: Multi-Agent Mimari (LangGraph)
+Sistemimiz LangGraph altyapısıyla 4 farklı yapay zeka ajanının senkronize çalışmasıyla işler:
+
+*   👁️ **Vision Agent (Gözlemci):** Google Gemini 2.5 Flash Vision kullanarak, müşteri sipariş açıklaması ile görsel kanıtları karşılaştırır. Piksel düzeyinde "kondisyon, aksesuar, ürün tipi" çıkarımı yapar. (Örn: Sipariş ayakkabı iken, görselin iPhone kutusu olmasını anında yakalar).
+*   🔍 **Verification Agent (Doğrulayıcı):** Orijinal ve iade analizlerini milimetrik olarak çapraz sorgular ve uyuşmazlık (mismatch) raporu oluşturur.
+*   ⚖️ **Decision Agent (Yargıç):** Müşterinin "İade Sebebi" (Örn: Hasarlı geldi vs. Beden uymadı) ile görsel bulguları karşılaştırarak mantıksal bir çıkarım yapar. Subjektif sebeplerde tolerans gösterirken, objektif yalan beyanlarda **Risk Skoruna** ceza puanı uygular.
+*   🎯 **Resolution Agent (Operasyon Şefi):** Kurumsal Case Management durumunu (Örn: İNCELEME_İÇİN_BEKLETİLİYOR) günceller, log kayıtlarını oluşturur ve pazar yeri "SAFE-T / Seller Protection" kurallarına uygun **Dispute (İtiraz) Raporunu** hazırlar.
+
+---
+
+## 💡 Neden Hackathon Kazandırır? (Pazar Gerçekliği)
+Projemiz, teorik bir AI demosu değil, pazar yerlerinin (Amazon, eBay, Trendyol, Hepsiburada) API akışlarına ve **SLA (Service Level Agreement)** sürelerine uygun tasarlanmıştır:
+*   Müşteri yalan beyanlarını görsel delillerle (Evidence Completeness Rate) çürütür.
+*   İlk inceleme süresini dakikalardan saniyelere indirir (TTR - Time to Resolution).
+*   Tüm süreci tek bir Dark Mode Enterprise Dashboard üzerinden yöneterek "Gerçek bir ürün" hissi verir.
 
 ---
 
 ## 💻 Tech Stack (Teknoloji Altyapısı)
-GuardianAI, modern ve ölçeklenebilir bir kurumsal (Enterprise) altyapıya sahiptir:
-
-*   **AI & Orchestration:** Google Gemini 2.5 Flash, LangGraph (StateGraph)
-*   **Backend:** FastAPI (Python), Pydantic (Veri Validasyonu)
-*   **Frontend:** Next.js (React), Tailwind CSS, Shadcn UI (Custom Dashboard)
+*   **AI Core:** Google Gemini 2.5 Flash (Vision & Reasoning), LangGraph (StateGraph)
+*   **Backend:** FastAPI (Python), Pydantic
+*   **Frontend:** Next.js (React), Tailwind CSS, Custom UI (Multi-step Onboarding)
 
 ---
 
-## 🛠️ Kurulum & Çalıştırma (Lokal Demo)
-
-Projeyi kendi bilgisayarınızda çalıştırmak için:
+## 🛠️ Kurulum & Lokal Test
+Sistemi lokalinizde çalıştırmak için:
 
 ### 1. Backend
 ```bash
 cd backend
 python -m venv venv
-# Windows için:
-.\venv\Scripts\activate
-# Mac/Linux için:
-source venv/bin/activate
-
+.\venv\Scripts\activate  # Mac/Linux: source venv/bin/activate
 pip install -r requirements.txt
-# .env dosyasına kendi GEMINI_API_KEY bilginizi girin.
 
+# .env dosyası oluşturup içine GEMINI_API_KEY=your_key_here ekleyin.
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -72,9 +75,4 @@ cd frontend
 npm install
 npm run dev
 ```
-Uygulama **http://localhost:3000** adresinde çalışacaktır.
-
----
-
-## 🌍 Vizyon: Agentic Commerce Dönemi
-Gelecekte alışverişleri bizim yerimize yapay zeka botları yapacak. Peki ya dolandırıcılığı da AI botları yaparsa? (Bot-Takeover saldırıları). GuardianAI, bu "AI vs AI" çağında, fiziksel dünyadaki ürünleri dijital dünyaya kusursuz bir veri seti olarak aktararak e-ticaretin **son savunma hattı** olmayı hedeflemektedir.
+Uygulama **http://localhost:3000** adresinde "Vaka Yönetim Platformu" olarak açılacaktır.
