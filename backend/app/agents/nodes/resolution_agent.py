@@ -30,51 +30,55 @@ def resolution_agent_node(state: dict) -> dict:
     
     # Priority
     priority_map = {
-        "critical": "CRITICAL",
-        "high": "HIGH",
-        "medium": "MEDIUM",
-        "low": "LOW"
+        "critical": "KRİTİK",
+        "high": "YÜKSEK",
+        "medium": "ORTA",
+        "low": "DÜŞÜK"
     }
-    case_priority = priority_map.get(risk_level, "LOW")
+    case_priority = priority_map.get(risk_level, "DÜŞÜK")
     
     # Status & Operational Outputs
     action_log = []
-    dispute_summary = "No dispute report required."
+    dispute_summary = "İtiraz raporu oluşturulmasına gerek yoktur."
     
     if risk_level == "critical":
-        case_status = "ESCALATED_FOR_REVIEW"
-        action_log.extend(["Refund temporarily suspended", "Evidence package generated", "Case escalated to manual operations team"])
-        dispute_summary = f"Automated AI detection confirmed critical anomalies (Score: {final_result.get('risk_score')}). The returned item is substantially different or manipulated. Refund is blocked."
-        recommended_next_step = "Review evidence package and submit dispute to marketplace."
-        resolution_trace = "Case escalated. Dispute package prepared and refund blocked."
+        case_status = "İNCELEME_İÇİN_BEKLETİLİYOR"
+        action_log.extend(["İade işlemi anında bloke edildi", "Mahkemeye/Pazar yerine sunulmak üzere delil paketi oluşturuldu", "Vaka acil olarak operasyon ekibine devredildi"])
+        dispute_summary = f"GuardianAI yapay zeka sistemi kritik anomaliler tespit etmiştir (Skor: {final_result.get('risk_score')}). İade edilen ürün orijinalinden tamamen farklı veya kasıtlı manipüle edilmiştir. Finansal koruma için para iadesi bloke edilmiştir."
+        recommended_next_step = "Delil paketini gözden geçirin ve pazaryerine itiraz sürecini başlatın."
+        resolution_trace = "Kritik dolandırıcılık tespiti! Vaka üst yönetime iletildi. İtiraz paketi hazırlandı ve iade iptal edildi."
         
     elif risk_level == "high":
-        case_status = "ACTION_REQUIRED"
-        action_log.extend(["Refund put on hold", "Flagged for supervisor review"])
-        dispute_summary = "High risk of fraud or damage detected. Requires human verification before proceeding."
-        recommended_next_step = "Verify mismatches manually."
-        resolution_trace = "High anomalies detected. Passed to operations for secondary check."
+        case_status = "AKSİYON_BEKLENİYOR"
+        action_log.extend(["İade işlemi askıya alındı", "Süpervizör kontrolü için işaretlendi"])
+        dispute_summary = "Yüksek dolandırıcılık veya ağır hasar riski tespit edildi. İşleme devam edilmeden önce insan doğrulaması şarttır."
+        recommended_next_step = "Tespit edilen anomalileri fotoğraflardan manuel olarak doğrulayın."
+        resolution_trace = "Yüksek anomaliler saptandı. İkincil kontrol için operasyon ekibine iletildi."
         
     elif risk_level == "medium":
-        case_status = "RISK_EVALUATED"
-        action_log.extend(["Warning flag attached to case", "Proceeding with standard flow"])
-        recommended_next_step = "Optional manual review if volume permits."
-        resolution_trace = "Minor discrepancies logged. Operational risk acceptable."
+        case_status = "RİSK_DEĞERLENDİRİLDİ"
+        action_log.extend(["Vakaya 'Potansiyel Risk' bayrağı eklendi", "Standart akış üzerinden işleme devam ediliyor"])
+        recommended_next_step = "Operasyonel yoğunluk yoksa manuel inceleme önerilir."
+        resolution_trace = "Küçük uyuşmazlıklar loglandı. Operasyonel risk kabul edilebilir seviyede."
         
     else:
-        case_status = "CLOSED_LOW_RISK"
-        action_log.extend(["Automated validation passed", "Refund approved"])
-        recommended_next_step = "Archive case."
-        resolution_trace = "Clear match. Auto-resolved and closed."
+        case_status = "KAPATILDI_DÜŞÜK_RİSK"
+        action_log.extend(["Otonom görsel doğrulama başarıyla geçti", "Müşterinin para iadesi anında onaylandı"])
+        recommended_next_step = "Vakayı arşivle."
+        resolution_trace = "Görseller tamamen uyuşuyor. Vaka otomatik olarak çözüldü ve kapatıldı."
 
     # Evidence Summary
     if len(report.mismatches) == 0:
-        evidence_summary = "Images perfectly match the original shipment."
+        evidence_summary = "İade görselleri orijinal sipariş kaydıyla birebir eşleşmektedir."
     else:
-        evidence_summary = f"Detected {len(report.mismatches)} discrepancies. Primary issue: {report.mismatches[0].description}"
+        evidence_summary = f"Sistem {len(report.mismatches)} farklı uyuşmazlık tespit etti. Ana Sorun: {report.mismatches[0].description}"
 
     # Financial Impact
-    financial_impact = get_financial_impact(orig_analysis.product_type) if orig_analysis else "$100"
+    user_provided_value = state.get("product_value", "").strip()
+    if user_provided_value:
+        financial_impact = user_provided_value
+    else:
+        financial_impact = get_financial_impact(orig_analysis.product_type) if orig_analysis else "$100"
 
     # Multi-Agent Thought Trace
     vision_trace = state.get("vision_trace", "Vision analysis completed.")

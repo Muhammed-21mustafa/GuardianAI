@@ -10,7 +10,9 @@ from app.agents.nodes.resolution_agent import resolution_agent_node
 class AgentState(TypedDict):
     original_image_bytes: bytes
     returned_image_bytes: bytes
-    customer_claim: str
+    order_description: str
+    customer_return_reason: str
+    product_value: str
     original_analysis: Optional[ImageAnalysis]
     returned_analysis: Optional[ImageAnalysis]
     verification_report: Optional[VerificationReport]

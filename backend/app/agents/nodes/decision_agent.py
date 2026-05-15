@@ -7,24 +7,38 @@ def decision_agent_node(state: dict) -> dict:
     report = state.get("verification_report")
     orig_analysis = state.get("original_analysis")
     ret_analysis = state.get("returned_analysis")
-    customer_claim = state.get("customer_claim", "")
+    
+    order_desc = state.get("order_description", "")
+    reason = state.get("customer_return_reason", "")
 
     # Calculate risk score and action
     risk_score, risk_level = risk_service.calculate_risk(report)
     recommended_action, manual_review = risk_service.determine_action(risk_level)
 
+    # Contextual adjustments for subjective vs objective
+    reason_lower = reason.lower()
+    is_subjective = any(word in reason_lower for word in ["size", "small", "large", "uncomfortable", "expect", "liked", "changed mind", "fit"])
+    is_objective = any(word in reason_lower for word in ["damaged", "wrong", "missing", "broken", "defective"])
+
     # Generate Thought Trace (Reasoning)
     mismatch_fields = [m.field for m in report.mismatches]
-    
+    context_str = f"Sipariş: '{order_desc}'. Müşteri Sebebi: '{reason}'." if order_desc or reason else ""
+
     if risk_score == 0:
-        thought_trace = f"No discrepancies found. Customer claim '{customer_claim}' aligns with the verified flawless condition. Approved."
-        summary = "Return matches original shipment"
+        if is_objective:
+            thought_trace = f"Görsel olarak hiçbir uyumsuzluk bulunmadı. Müşteri objektif bir sebep belirtti ('{reason}'). Ürün görsel olarak kusursuz olduğu için bu muhtemelen donanımsal/içsel bir hatadır. Onaylandı."
+        else:
+            thought_trace = f"Görsel olarak hiçbir uyumsuzluk bulunmadı. {context_str} Müşteri beyanı güvenli iade koşullarıyla uyuşuyor. Onaylandı."
+        summary = "İade orijinal ürünle tam eşleşiyor"
     elif risk_level in ["high", "critical"]:
-        thought_trace = f"Detected high-risk mismatches in: {', '.join(mismatch_fields)}. Customer claimed: '{customer_claim}'. The visual evidence strongly contradicts acceptable return conditions. Risk score elevated."
-        summary = "High Fraud Probability or Severe Damage"
+        thought_trace = f"Şu alanlarda yüksek riskli uyumsuzluk tespit edildi: {', '.join(mismatch_fields)}. {context_str} Görsel deliller, kabul edilebilir iade koşullarıyla kesinlikle çelişiyor. Risk skoru kritik seviyeye yükseltildi."
+        summary = "Yüksek Dolandırıcılık İhtimali veya Ağır Hasar"
     else:
-        thought_trace = f"Detected minor inconsistencies in {', '.join(mismatch_fields)}. Customer claimed: '{customer_claim}'. Requires human eyes to confirm acceptability."
-        summary = "Potential Wear/Tear or Minor Issue"
+        if is_subjective:
+            thought_trace = f"Şu alanlarda küçük tutarsızlıklar tespit edildi: {', '.join(mismatch_fields)}. {context_str} Müşterinin iade sebebi subjektif olduğu için görseldeki küçük hatalar normal kullanım yıpranması olabilir. Risk skoru suni olarak artırılmadı."
+        else:
+            thought_trace = f"Şu alanlarda küçük tutarsızlıklar tespit edildi: {', '.join(mismatch_fields)}. {context_str} Kabul edilebilirliğini doğrulamak için manuel inceleme gerekmektedir."
+        summary = "Potansiyel Yıpranma veya Küçük Hata"
 
     # Calculate overall confidence based on vision analysis confidence
     overall_confidence = (orig_analysis.confidence + ret_analysis.confidence) / 2.0

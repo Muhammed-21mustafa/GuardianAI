@@ -10,7 +10,9 @@ router = APIRouter()
 async def analyze_return_endpoint(
     original_image: UploadFile = File(...),
     returned_image: UploadFile = File(...),
-    customer_claim: str = Form(default="")
+    order_description: str = Form(default=""),
+    customer_return_reason: str = Form(default=""),
+    product_value: str = Form(default="")
 ):
     """
     POST /api/v1/analyze-return
@@ -31,7 +33,9 @@ async def analyze_return_endpoint(
     initial_state = {
         "original_image_bytes": orig_bytes,
         "returned_image_bytes": ret_bytes,
-        "customer_claim": customer_claim
+        "order_description": order_description,
+        "customer_return_reason": customer_return_reason,
+        "product_value": product_value
     }
 
     # 3. Invoke LangGraph Pipeline

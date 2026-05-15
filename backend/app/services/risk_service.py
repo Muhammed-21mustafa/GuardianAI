@@ -66,14 +66,14 @@ class RiskService:
         Returns: (recommended_action, manual_review_required)
         """
         if risk_level == "low":
-            return "Approve Return", False
+            return "İadeyi Onayla", False
         elif risk_level == "medium":
-            return "Flag for Warning, Proceed with Caution", True
+            return "Uyarı: İadeyi İncelemeye Al", True
         elif risk_level == "high":
-            return "Suspend Refund, Request Manual Review", True
+            return "İadeyi Beklet, Manuel Kontrol Gerekiyor", True
         elif risk_level == "critical":
-            return "Block Refund, Auto-Generate Dispute Report", True
+            return "İadeyi Bloke Et, İtiraz Raporu Oluştur", True
             
-        return "Manual Review", True
+        return "Manuel İnceleme", True
 
 risk_service = RiskService()
