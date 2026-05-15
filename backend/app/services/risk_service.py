@@ -3,17 +3,19 @@ from app.schemas.analysis import VerificationReport
 
 class RiskService:
     @staticmethod
-    def calculate_risk(report: VerificationReport) -> Tuple[int, str]:
+    def calculate_risk(report: VerificationReport, customer_reason: str = "") -> Tuple[int, str, bool]:
         """
         Calculates risk score (0-100) and risk level based on the verification report.
         Uses a weighted scoring system for granular risk assessment.
-        Returns: (risk_score, risk_level)
+        Returns: (risk_score, risk_level, inconsistency_detected)
         """
         score = 0
         is_completely_different_product = False
         
+        mismatch_fields = []
         # Weighted points by field
         for mismatch in report.mismatches:
+            mismatch_fields.append(mismatch.field)
             if mismatch.severity == "critical":
                 is_completely_different_product = True
                 break
@@ -40,12 +42,29 @@ class RiskService:
                     score += 15
                 elif mismatch.severity == "low":
                     score += 5
+        
+        # Apply logic for customer claim
+        inconsistency_detected = False
+        if not is_completely_different_product and customer_reason:
+            reason_lower = customer_reason.lower()
+            is_objective_damage = any(word in reason_lower for word in ["hasarlı", "kusurlu", "çalışmıyor", "damaged", "defective", "broken"])
+            is_objective_missing = any(word in reason_lower for word in ["eksik", "yanlış", "missing", "wrong"])
+            
+            # "Hasarlı geldi" dedi ama ürün sağlam görünüyorsa -> risk medium (+30)
+            if is_objective_damage and "visible_damage" not in mismatch_fields and "condition" not in mismatch_fields:
+                score += 30
+                inconsistency_detected = True
+                
+            # "Eksik parça" dedi ama görselde parça tam görünüyorsa -> risk medium (+30)
+            if is_objective_missing and "accessories" not in mismatch_fields and "product_type" not in mismatch_fields:
+                score += 30
+                inconsistency_detected = True
                 
         if is_completely_different_product:
             score = 100
         else:
-            # Cap score at 100
-            score = min(score, 100)
+            # Cap score at 99 if not completely different
+            score = min(score, 99)
         
         # Determine risk level based on new thresholds
         if score <= 25:
@@ -57,7 +76,7 @@ class RiskService:
         else:
             level = "critical"
             
-        return score, level
+        return score, level, inconsistency_detected
 
     @staticmethod
     def determine_action(risk_level: str) -> Tuple[str, bool]:

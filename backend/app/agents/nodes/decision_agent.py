@@ -12,23 +12,22 @@ def decision_agent_node(state: dict) -> dict:
     reason = state.get("customer_return_reason", "")
 
     # Calculate risk score and action
-    risk_score, risk_level = risk_service.calculate_risk(report)
+    risk_score, risk_level, inconsistency = risk_service.calculate_risk(report, reason)
     recommended_action, manual_review = risk_service.determine_action(risk_level)
 
     # Contextual adjustments for subjective vs objective
     reason_lower = reason.lower()
-    is_subjective = any(word in reason_lower for word in ["size", "small", "large", "uncomfortable", "expect", "liked", "changed mind", "fit"])
-    is_objective = any(word in reason_lower for word in ["damaged", "wrong", "missing", "broken", "defective"])
+    is_subjective = any(word in reason_lower for word in ["beden", "rahatsız", "beklentimi", "fikrimi", "size", "uncomfortable", "expect", "liked", "changed", "fit"])
 
     # Generate Thought Trace (Reasoning)
     mismatch_fields = [m.field for m in report.mismatches]
     context_str = f"Sipariş: '{order_desc}'. Müşteri Sebebi: '{reason}'." if order_desc or reason else ""
 
-    if risk_score == 0:
-        if is_objective:
-            thought_trace = f"Görsel olarak hiçbir uyumsuzluk bulunmadı. Müşteri objektif bir sebep belirtti ('{reason}'). Ürün görsel olarak kusursuz olduğu için bu muhtemelen donanımsal/içsel bir hatadır. Onaylandı."
-        else:
-            thought_trace = f"Görsel olarak hiçbir uyumsuzluk bulunmadı. {context_str} Müşteri beyanı güvenli iade koşullarıyla uyuşuyor. Onaylandı."
+    if inconsistency and len(mismatch_fields) == 0:
+        thought_trace = f"Görsel bir uyumsuzluk bulunmadı, ancak müşteri beyanıyla (ör. hasar/eksik iddiası) görsel kanıt çelişiyor. {context_str} Durum şüpheli olduğu için manuel inceleme önerilir."
+        summary = "Müşteri Beyanı ile Görsel Kanıt Çelişkisi"
+    elif risk_score == 0:
+        thought_trace = f"Görsel olarak hiçbir uyumsuzluk bulunmadı. {context_str} Müşteri beyanı güvenli iade koşullarıyla uyuşuyor. Onaylandı."
         summary = "İade orijinal ürünle tam eşleşiyor"
     elif risk_level in ["high", "critical"]:
         thought_trace = f"Şu alanlarda yüksek riskli uyumsuzluk tespit edildi: {', '.join(mismatch_fields)}. {context_str} Görsel deliller, kabul edilebilir iade koşullarıyla kesinlikle çelişiyor. Risk skoru kritik seviyeye yükseltildi."
