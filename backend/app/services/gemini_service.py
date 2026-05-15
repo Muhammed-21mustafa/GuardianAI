@@ -11,7 +11,7 @@ class GeminiService:
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
         self.model_name = settings.GEMINI_MODEL_VISION
 
-    def analyze_image(self, image: Image.Image, context: str) -> ImageAnalysis:
+    def analyze_image(self, image: Image.Image, context: str, order_desc: str = "") -> ImageAnalysis:
         """
         Sends an image to Gemini Vision to extract structured fields.
         """
@@ -19,6 +19,8 @@ class GeminiService:
         Analyze this image carefully. This is {context}.
         You must extract the exact information required by the JSON schema.
         """
+        if order_desc:
+            prompt += f"\nCRITICAL CONTEXT: The merchant's order system describes this product as: '{order_desc}'. If the item in the image visually contradicts this description (e.g. image shows an iPhone but description says shoes), you MUST explicitly state this contradiction in the 'product_type' or 'visible_damage' field."
         
         try:
             # Using the modern google-genai SDK with structured output

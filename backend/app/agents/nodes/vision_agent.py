@@ -15,12 +15,14 @@ def vision_agent_node(state: dict) -> dict:
     returned_img = Image.open(io.BytesIO(returned_img_bytes)).convert("RGB")
 
     # Analyze via Gemini Service
+    order_desc = state.get("order_description", "")
+    
     orig_analysis = gemini_service.analyze_image(
-        original_img, "the original shipped product before packing"
+        original_img, "the original shipped product before packing", order_desc
     )
     
     ret_analysis = gemini_service.analyze_image(
-        returned_img, "the product returned by the customer"
+        returned_img, "the product returned by the customer", order_desc
     )
 
     # Create trace
