@@ -1,60 +1,80 @@
-# GuardianAI 🛡️
+# 🛡️ GuardianAI: Autonomous Security Shield for E-Commerce
 
-![GuardianAI Banner](https://via.placeholder.com/1200x300?text=GuardianAI+-+Autonomous+Operational+Security+Shield)
-
-> **Finans ve E-Ticaret için Otonom Operasyonel Güvenlik Kalkanı**
-> *Hekaton’26 Hackathon Projesi*
-
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org)
-[![LangGraph](https://img.shields.io/badge/Agentic-LangGraph-orange.svg)](https://python.langchain.com/docs/langgraph)
-[![Gemini](https://img.shields.io/badge/AI-Gemini_1.5_Pro-blue.svg)](https://deepmind.google/technologies/gemini/)
-
-## 📖 Problem Tanımı
-E-ticaretteki "kolay iade" politikaları, satıcıların "boş kutu", "kullanılmış ürün" veya "farklı ürün" iadeleriyle finansal zarara uğramasına neden olmaktadır (*Return Fraud*). GuardianAI, bu süreci otonom olarak yöneten, jüri kriterlerine uygun **Agentic (Otonom)** bir yapay zeka sistemidir.
-
-## 🚀 Çözüm: Agentic Multimodal Pipeline
-GuardianAI basit bir dashboard değil, kendi kararlarını alabilen bir "Güvenlik Ajanı"dır:
-1. **Vision (Görme):** İade edilen paketin/ürünün görsel bütünlüğünü inceler (Multimodal LLM / YOLO).
-2. **Reasoning (Muhakeme):** Orijinal ürün verisi ile iade görselini karşılaştırıp "Fraud Risk Skoru" üretir.
-3. **Action (Aksiyon):** Risk yüksekse iadeyi askıya alır, itiraz dilekçesini hazırlar ve kargo/pazaryerine otonom bildirim gönderir.
-
-## 🏗️ Mimari (Tech Stack)
-- **Frontend:** Next.js (App Router), Tailwind CSS, Shadcn/ui
-- **Backend:** FastAPI, Pydantic, PostgreSQL
-- **AI/Agents:** LangGraph, Google Gemini 1.5 Pro (Vision & Reasoning)
-
-## 📁 Proje Yapısı
-```text
-GuardianAI/
-├── backend/          # FastAPI ve LangGraph Agent kodları
-├── frontend/         # Next.js Dashboard
-├── docs/             # Mimari diyagramlar ve sunum notları
-└── docker-compose.yml# Hızlı kurulum
-```
-
-## ⚙️ Kurulum ve Çalıştırma
-
-### Gereksinimler
-- Docker & Docker Compose
-- Google Gemini API Key
-
-### Başlangıç
-```bash
-# 1. Repoyu klonlayın
-git clone <repo-url>
-cd GuardianAI
-
-# 2. Çevre değişkenlerini ayarlayın
-cp .env.example .env
-
-# 3. Docker ile tüm sistemi ayağa kaldırın
-docker-compose up -d --build
-```
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000`
-- API Docs (Swagger): `http://localhost:8000/docs`
+<div align="center">
+  <p><strong>890 Milyar Dolarlık İade Krizine KOBİ Odaklı "Otonom Şahit" Çözümü</strong></p>
+</div>
 
 ---
-*Bu proje Hekaton’26 kapsamında geliştirilmektedir.*
+
+## 🛑 Problem: Görünmeyen Tehdidin Anatomisi
+2025 yılı verilerine göre e-ticaret dünyasında **"İade Dolandırıcılığı" (Return Fraud)** ve operasyonel suistimaller her yıl **890 Milyar Dolarlık** devasa bir kayba yol açmaktadır. 
+Özellikle Türkiye e-ticaret pazarının %78'ini oluşturan **KOBİ'ler**, kurumsal devlere kıyasla bu dolandırıcılıktan **%57 daha fazla zarar görmekte** ve çoğu zaman iflas riskiyle karşı karşıya kalmaktadır.
+
+*   **Empty Box Scam / Rock in a Box:** İade kutusundan ürün yerine taş çıkması.
+*   **Return Fraud:** Orijinal ürünün alıkonup, içine sahte/eski ürün konularak iade edilmesi.
+*   **Wardrobing:** Tek seferlik kullanıp "beğenmedim" diyerek geri gönderme (özellikle tekstil ve elektronik).
+
+Satıcıların elinde iade sürecinin haklılığını kanıtlayacak **manipüle edilemez dijital deliller** bulunmadığı için, platformlar (Amazon, Trendyol vb.) genellikle alıcıyı haklı bulmakta ve KOBİ'ler zarara uğramaktadır.
+
+---
+
+## 🚀 Çözüm: GuardianAI ("Otonom Şahit")
+GuardianAI, statik kodlarla çalışan basit bir yazılım değil; fiziksel dünyayı görebilen, muhakeme edebilen ve aksiyon alabilen bir **Agentic Commerce Defense (Yapay Zeka Savunma Ağı)** platformudur. 
+
+Olay anında bir **"Otonom Şahit"** olarak devreye girer. Depo görevlisi iade paketini açtığı an sistemi besler, GuardianAI saniyeler içinde:
+1. İadeyi orijinal kargo verisiyle karşılaştırır.
+2. Sahtekarlığı, eksik aksesuarı veya hasarı tespit eder.
+3. Hukuki ve operasyonel olarak pazar yerlerine sunulmak üzere **Değiştirilemez Delil Paketi (Evidence Package)** ve itiraz raporu (Dispute Report) üretir.
+
+---
+
+## 🧠 Nasıl Çalışır? (Multi-Agent Architecture)
+Sistemimiz LangGraph altyapısıyla **4 farklı yapay zeka ajanının (Multi-Agent)** takım çalışmasıyla işler:
+
+1.  👁️ **Vision Agent (Gözlemci):** Gemini 2.5 Flash Vision modelini kullanarak orijinal ve iade edilen ürün fotoğraflarından piksel piksel "kondisyon, renk, aksesuar, ürün tipi" çıkarımı yapar.
+2.  🔍 **Verification Agent (Doğrulayıcı):** İki veri setini milimetrik olarak çapraz sorgular (Cross-reference) ve uyumsuzlukları (mismatches) şiddetine göre sınıflandırır.
+3.  ⚖️ **Decision Agent (Yargıç):** Weighted Scoring (Ağırlıklı Puanlama) algoritmasıyla 0-100 arası bir Risk Skoru hesaplar. (Örn: Çizik = 15 Puan, Farklı Ürün = 100 Puan/Kritik Risk).
+4.  🎯 **Resolution Agent (Operasyon Şefi):** Kurumsal Case Management (Vaka Yönetimi) sürecini başlatır. Otomatik aksiyonlar alır (örn: İadeyi bloke et), tahmini finansal kaybı hesaplar ve operasyon ekibine nihai raporu sunar.
+
+---
+
+## 💻 Tech Stack (Teknoloji Altyapısı)
+GuardianAI, modern ve ölçeklenebilir bir kurumsal (Enterprise) altyapıya sahiptir:
+
+*   **AI & Orchestration:** Google Gemini 2.5 Flash, LangGraph (StateGraph)
+*   **Backend:** FastAPI (Python), Pydantic (Veri Validasyonu)
+*   **Frontend:** Next.js (React), Tailwind CSS, Shadcn UI (Custom Dashboard)
+
+---
+
+## 🛠️ Kurulum & Çalıştırma (Lokal Demo)
+
+Projeyi kendi bilgisayarınızda çalıştırmak için:
+
+### 1. Backend
+```bash
+cd backend
+python -m venv venv
+# Windows için:
+.\venv\Scripts\activate
+# Mac/Linux için:
+source venv/bin/activate
+
+pip install -r requirements.txt
+# .env dosyasına kendi GEMINI_API_KEY bilginizi girin.
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 2. Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Uygulama **http://localhost:3000** adresinde çalışacaktır.
+
+---
+
+## 🌍 Vizyon: Agentic Commerce Dönemi
+Gelecekte alışverişleri bizim yerimize yapay zeka botları yapacak. Peki ya dolandırıcılığı da AI botları yaparsa? (Bot-Takeover saldırıları). GuardianAI, bu "AI vs AI" çağında, fiziksel dünyadaki ürünleri dijital dünyaya kusursuz bir veri seti olarak aktararak e-ticaretin **son savunma hattı** olmayı hedeflemektedir.
