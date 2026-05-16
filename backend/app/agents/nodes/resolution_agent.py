@@ -52,36 +52,33 @@ def resolution_agent_node(state: dict) -> dict:
 Sen e-ticaret satıcıları (KOBİ'ler) için çalışan profesyonel bir Hukuk ve Operasyon danışmanısın.
 Aşağıdaki vaka için bana iki farklı dilde iletişim taslağı hazırlaman gerekiyor:
 
-1. 'marketplace_appeal_draft': Amazon/Trendyol/Hepsiburada gibi bir pazar yerine (Marketplace) sunulmak üzere, son derece resmi ve kanıt odaklı bir iade itiraz (dispute/claim) dilekçesi. Satıcının haklı olduğunu ve para iadesinin bloke edilmesi gerektiğini savunmalı. (Markdown formatında, uzun ve etkili)
+1. 'MARKETPLACE APPEAL': Amazon/Trendyol/Hepsiburada gibi bir pazar yerine (Marketplace) sunulmak üzere, son derece resmi ve kanıt odaklı bir iade itiraz (dispute/claim) dilekçesi. Satıcının haklı olduğunu ve para iadesinin bloke edilmesi gerektiğini savunmalı. (Markdown formatında, uzun, detaylı ve çok etkili olsun. 'Sayın Platform Yetkilisi' diye başla).
 
-2. 'customer_response_draft': İadeyi yapan MÜŞTERİYE gönderilecek kibar, nötr ve profesyonel bir mesaj. Asla suçlayıcı (dolandırıcı vb.) olma. Sadece "Görsel doğrulama sonucunda bazı tutarsızlıklar tespit edildiği için iade süreciniz ek/manuel incelemeye aktarılmıştır" gibi politik bir dil kullan.
+2. 'CUSTOMER RESPONSE': İadeyi yapan MÜŞTERİYE gönderilecek kibar, nötr ve profesyonel bir mesaj. Asla suçlayıcı (dolandırıcı vb.) olma. Sadece "Görsel doğrulama sonucunda bazı tutarsızlıklar tespit edildiği için iade süreciniz ek/manuel incelemeye aktarılmıştır" gibi politik bir dil kullan.
 
 Vaka Detayları:
 Risk Seviyesi: {risk_level.upper()}
 Uyuşmazlıklar:
 {mismatch_str}
 
-SADECE VE SADECE aşağıdaki formata uygun geçerli bir JSON objesi döndür, başka hiçbir açıklama metni ekleme:
-{{
-  "marketplace_appeal_draft": "pazar yeri itiraz metni...",
-  "customer_response_draft": "müşteri mesajı..."
-}}
+LÜTFEN ÇIKTIYI SADECE AŞAĞIDAKİ GİBİ İKİYE BÖLEREK VER (Araya tam olarak ===CUSTOMER RESPONSE=== yaz):
+
+===MARKETPLACE APPEAL===
+[Pazar yeri itiraz dilekçesi metni]
+
+===CUSTOMER RESPONSE===
+[Müşteri mesajı metni]
             """
             generated_text = gemini_service.generate_text(prompt)
-            # Try to parse json from text (handle possible markdown formatting like ```json)
-            json_str = generated_text
-            if "```json" in generated_text:
-                match = re.search(r'```json\s*(.*?)\s*```', generated_text, re.DOTALL)
-                if match:
-                    json_str = match.group(1)
-            elif "```" in generated_text:
-                match = re.search(r'```\s*(.*?)\s*```', generated_text, re.DOTALL)
-                if match:
-                    json_str = match.group(1)
-                    
-            parsed_drafts = json.loads(json_str)
-            marketplace_appeal_draft = parsed_drafts.get("marketplace_appeal_draft", "")
-            customer_response_draft = parsed_drafts.get("customer_response_draft", "")
+            
+            if "===CUSTOMER RESPONSE===" in generated_text:
+                parts = generated_text.split("===CUSTOMER RESPONSE===")
+                marketplace_appeal_draft = parts[0].replace("===MARKETPLACE APPEAL===", "").strip()
+                customer_response_draft = parts[1].replace("===CUSTOMER RESPONSE===", "").strip()
+            else:
+                marketplace_appeal_draft = generated_text
+                customer_response_draft = "İade süreciniz görsel doğrulama aşamasında takıldığı için manuel incelemeye aktarılmıştır."
+                
             dispute_summary = marketplace_appeal_draft # keep for backward compatibility
         except Exception as e:
             dispute_summary = f"GuardianAI sistemi kritik anomaliler tespit etmiştir (Skor: {final_result.get('risk_score')}). Otomatik dilekçe oluşturulamadı. Hata: {str(e)}"

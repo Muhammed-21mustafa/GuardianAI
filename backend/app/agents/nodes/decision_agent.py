@@ -42,6 +42,21 @@ def decision_agent_node(state: dict) -> dict:
     # Calculate overall confidence based on vision analysis confidence
     overall_confidence = (orig_analysis.confidence + ret_analysis.confidence) / 2.0
 
+    # Generate Reason Codes
+    reason_codes = []
+    if "product_type" in mismatch_fields:
+        reason_codes.append("ITEM_SWAP")
+    if "accessories" in mismatch_fields:
+        reason_codes.append("MISSING_ACCESSORY")
+    if inconsistency:
+        reason_codes.append("CLAIM_MISMATCH")
+    if is_subjective:
+        reason_codes.append("SUBJECTIVE_RETURN")
+    if risk_level == "critical":
+        reason_codes.append("HIGH_FRAUD_PROBABILITY")
+    if risk_score == 0:
+        reason_codes.append("CLEAN_RETURN")
+
     return {
         "decision_trace": thought_trace,
         "final_result": {
@@ -52,7 +67,7 @@ def decision_agent_node(state: dict) -> dict:
             "recommended_action": recommended_action,
             "confidence": overall_confidence,
             "manual_review_required": manual_review,
-            # thought_trace will be built by ResolutionAgent
+            "reason_codes": reason_codes,
             "thought_trace": "" 
         }
     }

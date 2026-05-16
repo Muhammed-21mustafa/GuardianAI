@@ -24,5 +24,6 @@ export interface AnalysisResponse {
     dispute_report_summary: string;
     marketplace_appeal_draft: string;
     customer_response_draft: string;
+    reason_codes: string[];
     estimated_financial_impact: string;
 }

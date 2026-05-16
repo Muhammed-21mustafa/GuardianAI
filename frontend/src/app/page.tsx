@@ -468,25 +468,42 @@ export default function Dashboard() {
                 </div>
 
               </div>
-
-              {/* RIGHT COLUMN: AI Brain & Logs */}
               <div className="xl:col-span-5 space-y-6">
                 
                 {/* Risk Score Widget */}
-                <div className="bg-gradient-to-br from-[#0c0c0e] to-[#121216] border border-zinc-800 rounded-xl p-6 relative overflow-hidden flex items-center justify-between shadow-lg">
-                  <div className="z-10">
-                    <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-1">Hesaplanan Risk Skoru</p>
-                    <div className="flex items-baseline gap-1">
-                      <span className={`text-6xl font-black tracking-tighter ${result.risk_score > 60 ? 'text-red-500' : result.risk_score > 25 ? 'text-yellow-400' : 'text-emerald-400'}`}>{result.risk_score}</span>
-                      <span className="text-zinc-600 text-xl font-bold">/100</span>
-                    </div>
+                <div className="bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-6 flex flex-col justify-center items-center relative overflow-hidden shadow-lg">
+                  <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500/50 to-transparent opacity-50" />
+                  <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-2">HESAPLANAN RİSK SKORU</p>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className={`text-6xl font-black ${
+                      result.risk_level === 'critical' ? 'text-red-500' :
+                      result.risk_level === 'high' ? 'text-orange-500' :
+                      result.risk_level === 'medium' ? 'text-yellow-500' : 'text-emerald-500'
+                    }`}>
+                      {result.risk_score}
+                    </span>
+                    <span className="text-xl font-bold text-zinc-600">/100</span>
                   </div>
-                  <div className="z-10 text-right">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border ${getPriorityColor(result.risk_priority || result.case_priority)}`}>
-                       {result.risk_level} Risk
-                    </div>
-                    <p className="text-xs font-medium text-zinc-500 mt-2">% {Math.round(result.confidence * 100)} Yapay Zeka Güveni</p>
+                  <div className={`px-3 py-1 rounded-full border text-[11px] font-bold tracking-widest uppercase mb-4 ${
+                      result.risk_level === 'critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                      result.risk_level === 'high' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                      result.risk_level === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    {result.risk_level} RİSK
                   </div>
+                  
+                  {/* Reason Codes */}
+                  {result.reason_codes && result.reason_codes.length > 0 && (
+                    <div className="flex flex-wrap gap-1 justify-center mt-2">
+                      {result.reason_codes.map((code, i) => (
+                        <span key={i} className="text-[9px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
+                          {code}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <p className="text-[10px] text-zinc-500 mt-3 font-medium">% {(result.confidence * 100).toFixed(0)} Yapay Zeka Güveni</p>
                   <ShieldAlert className="absolute -right-4 -bottom-4 w-32 h-32 text-zinc-800/20 rotate-12" />
                 </div>
 

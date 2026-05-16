@@ -45,4 +45,5 @@ class AnalysisResponse(BaseModel):
     dispute_report_summary: str = Field(description="Draft summary for the dispute report")
     marketplace_appeal_draft: str = Field(default="", description="Draft for marketplace support team")
     customer_response_draft: str = Field(default="", description="Draft for polite customer response")
+    reason_codes: List[str] = Field(default=[], description="List of standardized reason codes for reporting")
     estimated_financial_impact: str = Field(description="Estimated financial value at risk")
