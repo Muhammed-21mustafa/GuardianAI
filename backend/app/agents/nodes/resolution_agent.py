@@ -39,27 +39,54 @@ def resolution_agent_node(state: dict) -> dict:
     
     # Status & Operational Outputs
     action_log = []
-    dispute_summary = "İtiraz raporu oluşturulmasına gerek yoktur."
+    marketplace_appeal_draft = "İtiraz raporu oluşturulmasına gerek yoktur."
+    customer_response_draft = "İade işleminiz başarıyla onaylanmış ve standart iade politikamız kapsamında işleme alınmıştır."
     
     if risk_level in ["critical", "high"]:
         try:
             from app.services.gemini_service import gemini_service
+            import json
+            import re
             mismatch_str = "\n".join([f"- {m.field}: {m.description}" for m in report.mismatches])
             prompt = f"""
 Sen e-ticaret satıcıları (KOBİ'ler) için çalışan profesyonel bir Hukuk ve Operasyon danışmanısın.
-Amazon/Trendyol/Hepsiburada gibi bir pazar yerine (Marketplace) sunulmak üzere resmi bir iade itiraz (dispute/claim) dilekçesi/raporu yazmalısın.
+Aşağıdaki vaka için bana iki farklı dilde iletişim taslağı hazırlaman gerekiyor:
+
+1. 'marketplace_appeal_draft': Amazon/Trendyol/Hepsiburada gibi bir pazar yerine (Marketplace) sunulmak üzere, son derece resmi ve kanıt odaklı bir iade itiraz (dispute/claim) dilekçesi. Satıcının haklı olduğunu ve para iadesinin bloke edilmesi gerektiğini savunmalı. (Markdown formatında, uzun ve etkili)
+
+2. 'customer_response_draft': İadeyi yapan MÜŞTERİYE gönderilecek kibar, nötr ve profesyonel bir mesaj. Asla suçlayıcı (dolandırıcı vb.) olma. Sadece "Görsel doğrulama sonucunda bazı tutarsızlıklar tespit edildiği için iade süreciniz ek/manuel incelemeye aktarılmıştır" gibi politik bir dil kullan.
 
 Vaka Detayları:
 Risk Seviyesi: {risk_level.upper()}
 Uyuşmazlıklar:
 {mismatch_str}
 
-Lütfen son derece resmi, kurumsal ve hukuki bir dille, satıcının haklı olduğunu savunan, bu iadenin neden reddedildiğini ve para iadesinin (refund) neden satıcı lehine bloke edilmesi gerektiğini açıklayan kapsamlı ama net bir itiraz raporu yaz. (Örn: 'Sayın Platform Yetkilisi...' diye başlayıp, hukuki ve operasyonel kanıtları vurgula). Tamamen Türkçe olsun. Markdown formatında yaz.
+SADECE VE SADECE aşağıdaki formata uygun geçerli bir JSON objesi döndür, başka hiçbir açıklama metni ekleme:
+{{
+  "marketplace_appeal_draft": "pazar yeri itiraz metni...",
+  "customer_response_draft": "müşteri mesajı..."
+}}
             """
-            generated_letter = gemini_service.generate_text(prompt)
-            dispute_summary = generated_letter
-        except Exception:
-            dispute_summary = f"GuardianAI sistemi kritik anomaliler tespit etmiştir (Skor: {final_result.get('risk_score')}). Otomatik dilekçe oluşturulamadı."
+            generated_text = gemini_service.generate_text(prompt)
+            # Try to parse json from text (handle possible markdown formatting like ```json)
+            json_str = generated_text
+            if "```json" in generated_text:
+                match = re.search(r'```json\s*(.*?)\s*```', generated_text, re.DOTALL)
+                if match:
+                    json_str = match.group(1)
+            elif "```" in generated_text:
+                match = re.search(r'```\s*(.*?)\s*```', generated_text, re.DOTALL)
+                if match:
+                    json_str = match.group(1)
+                    
+            parsed_drafts = json.loads(json_str)
+            marketplace_appeal_draft = parsed_drafts.get("marketplace_appeal_draft", "")
+            customer_response_draft = parsed_drafts.get("customer_response_draft", "")
+            dispute_summary = marketplace_appeal_draft # keep for backward compatibility
+        except Exception as e:
+            dispute_summary = f"GuardianAI sistemi kritik anomaliler tespit etmiştir (Skor: {final_result.get('risk_score')}). Otomatik dilekçe oluşturulamadı. Hata: {str(e)}"
+            marketplace_appeal_draft = dispute_summary
+            customer_response_draft = "İade işleminiz incelenmektedir."
 
     if risk_level == "critical":
         case_status = "İNCELEME_İÇİN_BEKLETİLİYOR"
@@ -118,6 +145,8 @@ Lütfen son derece resmi, kurumsal ve hukuki bir dille, satıcının haklı oldu
     final_result["automated_action_log"] = action_log
     final_result["recommended_next_step"] = recommended_next_step
     final_result["dispute_report_summary"] = dispute_summary
+    final_result["marketplace_appeal_draft"] = marketplace_appeal_draft
+    final_result["customer_response_draft"] = customer_response_draft
     final_result["estimated_financial_impact"] = financial_impact
     final_result["thought_trace"] = grand_trace
 

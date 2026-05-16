@@ -22,5 +22,7 @@ export interface AnalysisResponse {
     automated_action_log: string[];
     recommended_next_step: string;
     dispute_report_summary: string;
+    marketplace_appeal_draft: string;
+    customer_response_draft: string;
     estimated_financial_impact: string;
 }

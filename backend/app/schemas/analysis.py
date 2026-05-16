@@ -43,4 +43,6 @@ class AnalysisResponse(BaseModel):
     automated_action_log: List[str] = Field(description="List of actions automatically taken by the system")
     recommended_next_step: str = Field(description="Next recommended step for human operators")
     dispute_report_summary: str = Field(description="Draft summary for the dispute report")
+    marketplace_appeal_draft: str = Field(default="", description="Draft for marketplace support team")
+    customer_response_draft: str = Field(default="", description="Draft for polite customer response")
     estimated_financial_impact: str = Field(description="Estimated financial value at risk")

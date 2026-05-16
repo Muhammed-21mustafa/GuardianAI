@@ -423,10 +423,29 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    <div>
-                      <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-2">Resmi İtiraz / Hakem Heyeti Dilekçesi</p>
-                      <div className="text-sm text-zinc-400 border-l-2 border-zinc-700 pl-3.5 py-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 whitespace-pre-wrap">
-                        {result.dispute_report_summary}
+                    {/* Generated Communications */}
+                    <div className="pt-4 border-t border-zinc-800">
+                      <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-4">Otonom İletişim Taslakları</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Marketplace Appeal */}
+                        <div className="bg-zinc-900/50 rounded-lg border border-zinc-800/50 p-4">
+                          <p className="text-xs font-bold text-blue-400 mb-2 flex items-center gap-1.5">
+                            <ShieldAlert className="w-3.5 h-3.5" /> Pazar Yeri İtiraz Dilekçesi
+                          </p>
+                          <div className="text-sm text-zinc-400 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 whitespace-pre-wrap">
+                            {result.marketplace_appeal_draft || result.dispute_report_summary}
+                          </div>
+                        </div>
+
+                        {/* Customer Response */}
+                        <div className="bg-zinc-900/50 rounded-lg border border-zinc-800/50 p-4">
+                          <p className="text-xs font-bold text-emerald-400 mb-2 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5" /> Müşteri Bilgilendirme Mesajı
+                          </p>
+                          <div className="text-sm text-zinc-400 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 whitespace-pre-wrap">
+                            {result.customer_response_draft || "İade işleminiz başarıyla onaylanmış ve standart iade politikamız kapsamında işleme alınmıştır."}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
