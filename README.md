@@ -203,3 +203,5 @@ Bu proje bir hackathon prototipidir. Üretim ortamına alınmadan önce aşağı
 - Model çıktıları için ek kalite kontrol mekanizmaları
 
 GuardianAI bu haliyle, iade operasyonlarında yapay zekanın nasıl sorumlu, açıklanabilir ve insan denetimli bir karar destek aracına dönüşebileceğini gösteren çalışan bir prototiptir.
+
+ video sunum linki ektedir : https://youtu.be/Djc6-nXYKOQ 
