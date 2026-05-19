@@ -23,6 +23,7 @@ class MismatchItem(BaseModel):
 class VerificationReport(BaseModel):
     mismatches: List[MismatchItem]
     overall_severity: Literal["none", "low", "medium", "high", "critical"]
+    semantic_verification: Optional[dict] = None
 
 # --- Final Output Schema ---
 class AnalysisResponse(BaseModel):
@@ -34,7 +35,7 @@ class AnalysisResponse(BaseModel):
     confidence: float = Field(description="Overall confidence in the decision", ge=0.0, le=1.0)
     manual_review_required: bool = Field(description="Flag indicating if a human should review")
     thought_trace: str = Field(description="AI's reasoning chain")
-    
+    semantic_verification: Optional[dict] = Field(default=None, description="Semantic comparison details")
     # --- Case Management Extensions ---
     case_id: str = Field(description="Unique case identifier")
     case_status: str = Field(description="Current status of the case")

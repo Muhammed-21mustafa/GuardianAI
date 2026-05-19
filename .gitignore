@@ -34,6 +34,12 @@ venv.bak/
 .env
 .env.local
 
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+backend/uploads/
+
 # Node
 node_modules/
 npm-debug.log

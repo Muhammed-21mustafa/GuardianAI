@@ -26,4 +26,20 @@ export interface AnalysisResponse {
     customer_response_draft: string;
     reason_codes: string[];
     estimated_financial_impact: string;
+    semantic_verification?: Record<string, unknown> | null;
+}
+
+export interface CaseImageUrls {
+    original?: string;
+    returned?: string;
+}
+
+export interface CaseRecord {
+    id: string;
+    product_name: string;
+    risk_score: number;
+    status: string;
+    agent_data: AnalysisResponse;
+    image_urls?: CaseImageUrls;
+    created_at: string;
 }

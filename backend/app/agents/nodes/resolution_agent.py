@@ -56,6 +56,13 @@ Aşağıdaki vaka için bana iki farklı dilde iletişim taslağı hazırlaman g
 
 2. 'CUSTOMER RESPONSE': İadeyi yapan MÜŞTERİYE gönderilecek kibar, nötr ve profesyonel bir mesaj. Asla suçlayıcı (dolandırıcı vb.) olma. Sadece "Görsel doğrulama sonucunda bazı tutarsızlıklar tespit edildiği için iade süreciniz ek/manuel incelemeye aktarılmıştır" gibi politik bir dil kullan.
 
+KRİTİK KURAL - SOHBET DOLGUSU YASAK:
+Sen bir yapay zeka asistanı değil, katı bir veri işleme API'sisin.
+Çıktılarının öncesinde veya sonrasında KESİNLİKLE hiçbir sohbet cümlesi, selamlama, kişisel yorum veya giriş/çıkış cümlesi (örn: "Harika bir vaka", "İşte hazırladığım rapor" vb.) YAZMAYACAKSIN.
+Ürettiğin taslaklar doğrudan asıl metinle (örn: "Konu: ...") başlamalı ve sadece profesyonel içeriği barındırmalıdır.
+
+CRITICAL RULE FOR RESOLUTION: The mismatches might highlight 'Physical Damage' found in a close-up photo. If the issue is just physical damage and NOT a blatant 'Item Swap' or 'Fraud', DO NOT label the customer as a fraudster. Acknowledge the damage, suggest standard return policies (e.g. partial refund, standard rejection due to damage), and do not use aggressive legal action language in the Marketplace Appeal.
+
 Vaka Detayları:
 Risk Seviyesi: {risk_level.upper()}
 Uyuşmazlıklar:
@@ -87,27 +94,27 @@ LÜTFEN ÇIKTIYI SADECE AŞAĞIDAKİ GİBİ İKİYE BÖLEREK VER (Araya tam olar
 
     if risk_level == "critical":
         case_status = "İNCELEME_İÇİN_BEKLETİLİYOR"
-        action_log.extend(["İade işlemi anında bloke edildi", "Mahkemeye/Pazar yerine sunulmak üzere delil paketi oluşturuldu", "Vaka acil olarak operasyon ekibine devredildi"])
-        recommended_next_step = "Delil paketini gözden geçirin ve pazaryerine itiraz sürecini başlatın."
-        resolution_trace = "Kritik dolandırıcılık tespiti! Vaka üst yönetime iletildi. İtiraz paketi hazırlandı ve iade iptal edildi."
+        action_log.extend(["İade işlemi operasyonel inceleme için askıya alındı", "Pazar yerine sunulmak üzere Kanıt Özeti (Evidence Summary) oluşturuldu", "Vaka manuel doğrulama için yetkili ekibe eskale edildi"])
+        recommended_next_step = "Kanıt özetini gözden geçirin ve pazaryerine değerlendirme talebini iletin."
+        resolution_trace = "Kritik doğrulama anomalisi. Vaka insan denetimine (human-in-the-loop) eskale edildi. Kanıt taslakları hazırlandı."
         
     elif risk_level == "high":
         case_status = "AKSİYON_BEKLENİYOR"
-        action_log.extend(["İade işlemi askıya alındı", "Süpervizör kontrolü için işaretlendi"])
+        action_log.extend(["İade işlemi manuel inceleme için bekletiliyor", "Operasyonel kontrol için işaretlendi"])
         recommended_next_step = "Tespit edilen anomalileri fotoğraflardan manuel olarak doğrulayın."
-        resolution_trace = "Yüksek anomaliler saptandı. İkincil kontrol için operasyon ekibine iletildi."
+        resolution_trace = "Yüksek seviye tutarsızlık. Operasyonel karar için bekletiliyor."
         
     elif risk_level == "medium":
         case_status = "RİSK_DEĞERLENDİRİLDİ"
-        action_log.extend(["Vakaya 'Potansiyel Risk' bayrağı eklendi", "Standart akış üzerinden işleme devam ediliyor"])
+        action_log.extend(["Vakaya 'Potansiyel Tutarsızlık' bayrağı eklendi", "Standart akış üzerinden işleme devam ediliyor"])
         recommended_next_step = "Operasyonel yoğunluk yoksa manuel inceleme önerilir."
-        resolution_trace = "Küçük uyuşmazlıklar loglandı. Operasyonel risk kabul edilebilir seviyede."
+        resolution_trace = "Minör uyuşmazlıklar loglandı. Risk operasyonel sınırlar içinde."
         
     else:
         case_status = "KAPATILDI_DÜŞÜK_RİSK"
-        action_log.extend(["Otonom görsel doğrulama başarıyla geçti", "Müşterinin para iadesi anında onaylandı"])
+        action_log.extend(["Otonom görsel doğrulama başarıyla geçti", "İade süreci standart onay akışına devredildi"])
         recommended_next_step = "Vakayı arşivle."
-        resolution_trace = "Görseller tamamen uyuşuyor. Vaka otomatik olarak çözüldü ve kapatıldı."
+        resolution_trace = "Görseller beklenen profille eşleşiyor. Vaka onay sürecine aktarıldı."
 
     # Evidence Summary
     if len(report.mismatches) == 0:

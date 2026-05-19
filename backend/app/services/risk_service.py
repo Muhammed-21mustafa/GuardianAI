@@ -11,8 +11,20 @@ class RiskService:
         """
         score = 0
         is_completely_different_product = False
+        is_ambiguous = False
         
+        # Check semantic ambiguity first
+        if getattr(report, "semantic_verification", None):
+            sv = report.semantic_verification
+            p_conf = sv.get("product_match", {}).get("confidence", 1.0)
+            d_conf = sv.get("damage_match", {}).get("confidence", 1.0)
+            if p_conf < 0.75 or d_conf < 0.75:
+                is_ambiguous = True
+                
         mismatch_fields = []
+        reason_lower = customer_reason.lower()
+        is_customer_claiming_damage = any(word in reason_lower for word in ["hasar", "kusur", "darbe", "çizik", "kırık", "bozuk", "damaged", "defective", "broken"])
+        
         # Weighted points by field
         for mismatch in report.mismatches:
             mismatch_fields.append(mismatch.field)
@@ -23,11 +35,13 @@ class RiskService:
             if mismatch.field == "product_type":
                 score += 70
             elif mismatch.field == "condition":
-                score += 25
+                if not is_customer_claiming_damage:
+                    score += 25
             elif mismatch.field == "color":
                 score += 25
             elif mismatch.field == "visible_damage":
-                score += 20
+                if not is_customer_claiming_damage:
+                    score += 20
             elif mismatch.field == "accessories":
                 score += 15
             elif mismatch.field == "packaging_status":
@@ -65,7 +79,7 @@ class RiskService:
         else:
             # Cap score at 99 if not completely different
             score = min(score, 99)
-        
+            
         # Determine risk level based on new thresholds
         if score <= 25:
             level = "low"
@@ -76,6 +90,11 @@ class RiskService:
         else:
             level = "critical"
             
+        # Ambiguity Override: If the system is uncertain, do not assign high/critical risk.
+        if is_ambiguous and level in ["high", "critical"]:
+            level = "medium"
+            score = min(score, 60)
+            
         return score, level, inconsistency_detected
 
     @staticmethod
@@ -85,13 +104,13 @@ class RiskService:
         Returns: (recommended_action, manual_review_required)
         """
         if risk_level == "low":
-            return "İadeyi Onayla", False
+            return "Otonom Onay Önerilir", False
         elif risk_level == "medium":
-            return "Uyarı: İadeyi İncelemeye Al", True
+            return "Uyarı: Manuel İnceleme Önerilir (Ambiguous/Potansiyel Risk)", True
         elif risk_level == "high":
-            return "İadeyi Beklet, Manuel Kontrol Gerekiyor", True
+            return "İadeyi Beklet, Operasyonel Doğrulama Gerekiyor", True
         elif risk_level == "critical":
-            return "İadeyi Bloke Et, İtiraz Raporu Oluştur", True
+            return "Manuel İncelemeye Eskale Et (Kanıt Özeti Hazırlandı)", True
             
         return "Manuel İnceleme", True
 

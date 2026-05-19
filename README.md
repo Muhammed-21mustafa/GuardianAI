@@ -1,78 +1,205 @@
-# 🛡️ GuardianAI: AI-Powered Verification Case Management System
+# GuardianAI
 
-<div align="center">
-  <p><strong>E-Ticaret İade Ekosisteminde Otonom Doğrulama ve Operasyonel Risk Yönetim Platformu</strong></p>
-  <p><em>Hackathon Kazananı (Adayı) - B2B SaaS Prototipi</em></p>
-</div>
+**AI destekli iade önceliklendirme ve operasyonel doğrulama platformu**
 
----
+GuardianAI, e-ticaret satıcılarının iade süreçlerinde yaşadığı görsel doğrulama, önceliklendirme ve kanıt yönetimi problemini çözmeyi hedefleyen bir prototiptir.
 
-## 🛑 Problem: Operasyonel Sızıntı ve Ters Lojistik Krizi
-E-ticarette iade artık yalnızca “müşteri memnuniyeti” konusu değil; **operasyon, finans, sahtecilik ve ters lojistik** problemidir. 2024 verilerine göre perakende iadeleri küresel çapta **890 milyar dolara** ulaşmıştır. 
+Proje, iadeleri otomatik reddeden veya müşteriyi suçlayan bir sistem olarak tasarlanmamıştır. GuardianAI’nin amacı, operasyon ekiplerinin şüpheli iade vakalarını daha hızlı incelemesine, görsel kanıtları daha düzenli değerlendirmesine ve nihai kararı insan denetiminde vermesine yardımcı olmaktır.
 
-Satıcıların asıl ihtiyacı, iade sayısını mucizevi bir şekilde “sıfırlamak” değil; **hangi iadeye ne kadar sürede, hangi kanıtla ve hangi operasyonel aksiyonla yanıt vereceklerini sistematikleştirmektir.** Özellikle Türkiye'de Trendyol (2 gün ret süresi) ve Hepsiburada gibi platformların dar "zaman pencereleri" (SLA), otomasyonun değerini doğrudan görünür kılmaktadır.
+## Çözülen Problem
 
-Küçük ve orta ölçekli satıcılar (KOBİ'ler) için en yüksek zaman tasarrufu üç noktada oluşur:
-1. Düşük riskli iadeleri otomatik ayırma (Triage).
-2. Yüksek riskli vakalarda kanıt paketini (Evidence Package) standartlaştırma.
-3. Çoklu kanal verisini tek bir "Case Management" (Vaka Yönetimi) ekranında toplama.
+E-ticaret satıcıları için iade süreci çoğu zaman yalnızca “ürün geri geldi mi?” sorusundan ibaret değildir. Operasyon ekibinin yanıtlaması gereken daha kritik sorular vardır:
 
----
+- İade edilen ürün gerçekten siparişteki ürün mü?
+- Ürün depodan çıktığı kondisyonla mı geri döndü?
+- Aksesuar, parça veya ambalaj eksik mi?
+- Müşteri beyanı ile görsel kanıtlar tutarlı mı?
+- Bu dosya standart iade akışında mı ilerlemeli, yoksa manuel incelemeye mi alınmalı?
+- Pazaryeriyle yaşanabilecek bir uyuşmazlıkta satıcının elinde yeterli kanıt var mı?
 
-## 🚀 Çözüm: GuardianAI Operasyon Katmanı
-GuardianAI basit bir "fotoğraf doğrulama" aracı değil, uçtan uca bir **Case Management (Vaka Yönetimi)** sistemidir. "Fraud’ı tamamen durduran sihirli değnek" iddiasında bulunmak yerine; görsel kanıt öncelikli çalışan, vakaları önceliklendiren, değiştirilemez kanıt paketleri üreten ve pazar yerlerine (Marketplace) "Dispute" (İtiraz) hazırlığını hızlandıran gerçekçi bir B2B SaaS çözümüdür.
+Bu sorular bugün birçok satıcıda manuel olarak yanıtlanır. Depo çalışanı görselleri inceler, sipariş bilgisiyle karşılaştırır, şüpheli durumları not eder ve gerekirse pazaryerine açıklama hazırlar. Bu süreç yoğun iade hacminde yavaş, tutarsız ve kişiye bağımlı hale gelir.
 
-### Nasıl Çalışır? (4 Aşamalı Vaka Akışı)
-1. **Case Initiation (Vaka Başlatma):** Hangi pazar yerinden, hangi sebeple ve ne kadarlık bir ürün iade edildiğinin (Bağlam/Context) sisteme girilmesi.
-2. **Evidence Collection (Delil Toplama):** Orijinal ve İade ürün görsellerinin GuardianAI'a yüklenmesi.
-3. **AI Analysis (Otonom İnceleme):** Multi-agent (Çoklu-ajan) yapay zeka sisteminin saniyeler içinde kanıtları çapraz sorgulaması.
-4. **Case Resolution (Vaka Çözümü):** Otomatik itiraz raporu (Dispute Report), risk skoru ve operasyonel aksiyon önerisinin (İadeyi Onayla / Bloke Et) sunulması.
+## Neden Önemli?
 
----
+İade operasyonundaki hatalar satıcı için doğrudan maliyet üretir:
 
-## 🧠 Zeka Katmanı: Multi-Agent Mimari (LangGraph)
-Sistemimiz LangGraph altyapısıyla 4 farklı yapay zeka ajanının senkronize çalışmasıyla işler:
+- Yanlış veya farklı ürün iadesi kabul edilebilir.
+- Eksik aksesuar ya da hasarlı ürün gözden kaçabilir.
+- Şüpheli vakalar zamanında fark edilmediği için para iadesi tamamlanabilir.
+- Satıcı haklı olsa bile pazaryerine düzenli kanıt sunamadığı için itiraz süreci zayıf kalabilir.
 
-*   👁️ **Vision Agent (Gözlemci):** Google Gemini 2.5 Flash Vision kullanarak, müşteri sipariş açıklaması ile görsel kanıtları karşılaştırır. Piksel düzeyinde "kondisyon, aksesuar, ürün tipi" çıkarımı yapar. (Örn: Sipariş ayakkabı iken, görselin iPhone kutusu olmasını anında yakalar).
-*   🔍 **Verification Agent (Doğrulayıcı):** Orijinal ve iade analizlerini milimetrik olarak çapraz sorgular ve uyuşmazlık (mismatch) raporu oluşturur.
-*   ⚖️ **Decision Agent (Yargıç):** Müşterinin "İade Sebebi" (Örn: Hasarlı geldi vs. Beden uymadı) ile görsel bulguları karşılaştırarak mantıksal bir çıkarım yapar. Subjektif sebeplerde tolerans gösterirken, objektif yalan beyanlarda **Risk Skoruna** ceza puanı uygular.
-*   🎯 **Resolution Agent (Operasyon Şefi):** Kurumsal Case Management durumunu (Örn: İNCELEME_İÇİN_BEKLETİLİYOR) günceller, log kayıtlarını oluşturur ve pazar yeri "SAFE-T / Seller Protection" kurallarına uygun **Dispute (İtiraz) Raporunu** hazırlar.
+GuardianAI bu noktada manuel inceleme sürecini tamamen ortadan kaldırmayı değil, daha yönetilebilir ve kanıta dayalı hale getirmeyi hedefler.
 
----
+## Çözüm Yaklaşımı
 
-## 💡 Neden Hackathon Kazandırır? (Pazar Gerçekliği)
-Projemiz, teorik bir AI demosu değil, pazar yerlerinin (Amazon, eBay, Trendyol, Hepsiburada) API akışlarına ve **SLA (Service Level Agreement)** sürelerine uygun tasarlanmıştır:
-*   Müşteri yalan beyanlarını görsel delillerle (Evidence Completeness Rate) çürütür.
-*   İlk inceleme süresini dakikalardan saniyelere indirir (TTR - Time to Resolution).
-*   Tüm süreci tek bir Dark Mode Enterprise Dashboard üzerinden yöneterek "Gerçek bir ürün" hissi verir.
+GuardianAI, iade operasyonunda depo/pazaryeri akışı ile insan operatör arasında çalışan bir karar destek katmanıdır.
 
----
+Sistem iki temel görsel girdiyi kullanır:
 
-## 💻 Tech Stack (Teknoloji Altyapısı)
-*   **AI Core:** Google Gemini 2.5 Flash (Vision & Reasoning), LangGraph (StateGraph)
-*   **Backend:** FastAPI (Python), Pydantic
-*   **Frontend:** Next.js (React), Tailwind CSS, Custom UI (Multi-step Onboarding)
+1. **Beklenen ürün görseli:** Katalog görseli, paketleme kamerası çıktısı veya siparişe ait referans görsel.
+2. **İade edilen ürün görseli:** Depoya geri dönen paketten çıkan ürünün fotoğrafı.
 
----
+Bu iki görsel ve sipariş bağlamı analiz edilerek şu çıktılar üretilir:
 
-## 🛠️ Kurulum & Lokal Test
-Sistemi lokalinizde çalıştırmak için:
+- Risk skoru
+- Risk seviyesi
+- Tespit edilen uyuşmazlıklar
+- Operasyonel kanıt özeti
+- İnsan incelemesi gerekip gerekmediği
+- Pazaryeri değerlendirme talebi taslağı
+- Müşteriye gönderilebilecek nötr bilgilendirme metni
 
-### 1. Backend
-```bash
-cd backend
-python -m venv venv
-.\venv\Scripts\activate  # Mac/Linux: source venv/bin/activate
-pip install -r requirements.txt
+Nihai karar sistem tarafından otomatik verilmez. GuardianAI, karar verecek operasyon ekibine yapılandırılmış bilgi ve kanıt sunar.
 
-# .env dosyası oluşturup içine GEMINI_API_KEY=your_key_here ekleyin.
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+## Sistem Akışı
+
+```text
+İade vakası
+   ↓
+Beklenen ürün görseli + iade ürün görseli
+   ↓
+Vision Agent
+   ↓
+Verification Agent
+   ↓
+Decision Agent
+   ↓
+Resolution Agent
+   ↓
+Operasyonel delil dosyası + insan kararı
 ```
 
-### 2. Frontend
-```bash
+## Ajan Mimarisi
+
+GuardianAI dört aşamalı bir yapay zeka akışı kullanır.
+
+| Ajan | Görev |
+| --- | --- |
+| **Vision Agent** | Görsellerden ürün tipi, kondisyon, görünür hasar, ambalaj ve aksesuar bilgilerini çıkarır. |
+| **Verification Agent** | Beklenen ürün ile iade edilen ürün arasındaki tutarsızlıkları karşılaştırır. |
+| **Decision Agent** | Uyuşmazlıkların önemine göre risk skoru, risk seviyesi ve manuel inceleme ihtiyacını hesaplar. |
+| **Resolution Agent** | Operasyon ekibine sunulacak kanıt özeti ve iletişim taslaklarını hazırlar. |
+
+## Örnek Kullanım Senaryoları
+
+| Senaryo | Sistem çıktısı |
+| --- | --- |
+| Ürün aynı ve belirgin sorun yok | Düşük risk, standart iade akışı önerisi |
+| Aksesuar eksik | Manuel inceleme önerisi, eksik parça kanıtı |
+| Ürün hasarlı geri döndü | Hasar bulgusu, operasyonel değerlendirme önerisi |
+| Beklenen üründen tamamen farklı ürün döndü | Kritik risk, kanıt özeti ve pazaryeri değerlendirme taslağı |
+
+## Tasarım İlkeleri
+
+GuardianAI aşağıdaki ilkelerle tasarlanmıştır:
+
+- **İnsan denetimi:** Son karar operasyon ekibindedir.
+- **Açıklanabilirlik:** Risk skoru tek başına verilmez; gerekçeler ve uyuşmazlıklar gösterilir.
+- **Nötr dil:** Müşteri iletişiminde suçlayıcı ifadeler kullanılmaz.
+- **Kanıt odaklılık:** Sistem görsel bulguları operasyonel dosyaya dönüştürür.
+- **Ölçeklenebilirlik:** Çok sayıda iade arasından öncelikli dosyaları ayırmayı hedefler.
+
+## Prototipte Bulunan Özellikler
+
+- Manuel iade vakası başlatma
+- Beklenen ürün ve iade ürünü görseli yükleme
+- AI tabanlı görsel analiz
+- Risk skoru ve öncelik seviyesi
+- Uyuşmazlık tablosu
+- Operasyonel kanıt özeti
+- Pazaryeri değerlendirme talebi taslağı
+- Müşteri bilgilendirme metni
+- Ajan karar izi
+- Vaka listesi ve sonuç ekranı
+
+## Teknik Mimari
+
+**Frontend**
+
+- Next.js
+- React
+- Tailwind CSS
+- Lucide React
+
+**Backend**
+
+- FastAPI
+- LangGraph
+- Google Gemini Vision
+- SQLAlchemy
+- SQLite
+
+## Proje Yapısı
+
+```text
+GuardianAII/
+├─ backend/
+│  ├─ app/
+│  │  ├─ agents/
+│  │  ├─ api/
+│  │  ├─ services/
+│  │  ├─ schemas/
+│  │  └─ main.py
+│  └─ requirements.txt
+├─ frontend/
+│  ├─ src/app/
+│  ├─ src/lib/
+│  ├─ src/types/
+│  └─ package.json
+└─ README.md
+```
+
+## Lokal Kurulum
+
+### Backend
+
+```powershell
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+py -m pip install -r requirements.txt
+py -m uvicorn app.main:app --reload
+```
+
+Backend varsayılan adres:
+
+```text
+http://localhost:8000
+```
+
+### Frontend
+
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
-Uygulama **http://localhost:3000** adresinde "Vaka Yönetim Platformu" olarak açılacaktır.
+
+Frontend varsayılan adres:
+
+```text
+http://localhost:3000
+```
+
+## Demo Akışı
+
+1. Frontend paneli açılır.
+2. Yeni iade doğrulama vakası başlatılır.
+3. Sipariş bağlamı girilir.
+4. Beklenen ürün görseli ve iade edilen ürün görseli yüklenir.
+5. AI analiz akışı çalıştırılır.
+6. Sonuç ekranında risk skoru, uyuşmazlıklar, kanıt özeti ve önerilen aksiyonlar incelenir.
+7. Operasyon ekibi nihai kararı verir.
+
+## Kapsam ve Sınırlar
+
+Bu proje bir hackathon prototipidir. Üretim ortamına alınmadan önce aşağıdaki başlıkların geliştirilmesi gerekir:
+
+- Gerçek pazaryeri API entegrasyonları
+- Depo kamera sistemleriyle entegrasyon
+- Daha geniş test veri seti
+- Rol bazlı kullanıcı yetkilendirme
+- Denetim kayıtları ve güvenlik sertleştirmesi
+- Model çıktıları için ek kalite kontrol mekanizmaları
+
+GuardianAI bu haliyle, iade operasyonlarında yapay zekanın nasıl sorumlu, açıklanabilir ve insan denetimli bir karar destek aracına dönüşebileceğini gösteren çalışan bir prototiptir.

@@ -1,541 +1,795 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Upload, ShieldAlert, Activity, Terminal, AlertTriangle, CheckCircle, ArrowRight, Download, FileText, Check, Shield, Clock, Search, XCircle, ChevronRight, ChevronLeft, Box, Tag, Store } from "lucide-react";
-import { analyzeReturn } from "@/lib/api";
-import { AnalysisResponse } from "@/types";
+/* eslint-disable @next/next/no-img-element */
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  Boxes,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CircleDollarSign,
+  Clock3,
+  FileSearch,
+  FolderOpen,
+  Gauge,
+  LayoutDashboard,
+  Loader2,
+  Menu,
+  PackageCheck,
+  PlusCircle,
+  Search,
+  ShieldCheck,
+  Store,
+  Upload,
+} from "lucide-react";
+import { analyzeReturn, fetchCases } from "@/lib/api";
+import { cleanText, statusLabel } from "@/lib/format";
+import type { AnalysisResponse, CaseRecord } from "@/types";
+
+type ActiveView = "dashboard" | "cases" | "new_case";
+type WizardStep = 1 | 2 | 3;
+
+const loadingMessages = [
+  "Vaka kaydı hazırlanıyor",
+  "Vision Agent görselleri yapılandırılmış veriye çeviriyor",
+  "Verification Agent beklenen ve dönen ürünü karşılaştırıyor",
+  "Decision Agent risk ve finansal etkiyi hesaplıyor",
+  "Resolution Agent kanıt özeti ve aksiyon taslaklarını oluşturuyor",
+];
+
+const demoResult: AnalysisResponse = {
+  case_id: "GA-E4F71D",
+  case_status: "IN_REVIEW",
+  case_priority: "KRİTİK",
+  risk_score: 100,
+  risk_level: "critical",
+  confidence: 0.98,
+  manual_review_required: true,
+  reason_codes: ["ITEM_SWAP", "CRITICAL_VERIFICATION_RISK"],
+  estimated_financial_impact: "45.000 TL",
+  evidence_summary:
+    "İade paketi içeriği beklenen iPhone 15 Pro Max cihazı ile uyuşmuyor. Kutunun içinde farklı kategoride bir ürün tespit edildi.",
+  mismatches: [
+    {
+      field: "product_type",
+      original_value: "iPhone 15 Pro Max",
+      returned_value: "Dove sabun",
+      severity: "critical",
+      description: "Ürün tipi tamamen farklı. Bu vaka ürün değiştirme riskine işaret ediyor.",
+    },
+  ],
+  dispute_report_summary:
+    "Görsel doğrulama sonucunda beklenen ürün ile iade paketindeki ürün arasında kritik seviyede uyuşmazlık tespit edildi.",
+  marketplace_appeal_draft:
+    "Sayın Platform Yetkilisi,\n\nİlgili iade dosyasında görsel doğrulama sonucunda sipariş kaydındaki ürün ile depoya ulaşan iade içeriği arasında kritik seviyede uyuşmazlık tespit edilmiştir. Para iadesi tamamlanmadan önce dosyanın operasyon ekibi tarafından değerlendirilmesini ve ek kanıtların incelenmesini rica ederiz.",
+  customer_response_draft:
+    "İade süreciniz, görsel doğrulama sırasında tespit edilen bazı tutarsızlıklar nedeniyle ek incelemeye alınmıştır. İnceleme tamamlandığında süreç hakkında yeniden bilgilendirileceksiniz.",
+  automated_action_log: [
+    "Pazaryeri webhook akışı üzerinden yeni iade vakası alındı.",
+    "Orijinal sipariş görseli ile depo iade görseli karşılaştırıldı.",
+    "Kritik ürün uyumsuzluğu tespit edildi.",
+    "Kanıt özeti hazırlanarak insan incelemesine yönlendirildi.",
+  ],
+  thought_trace:
+    "VISION AGENT:\nOriginal: iPhone 15 Pro Max. Returned: Dove soap.\n\nVERIFICATION AGENT:\nFound 1 critical discrepancy. Overall severity: CRITICAL.\n\nDECISION AGENT:\nRisk score set to 100 because returned item category differs completely.\n\nRESOLUTION AGENT:\nMarketplace appeal and neutral customer response prepared for human review.",
+  summary: "İade edilen ürün beklenen ürünle uyuşmuyor.",
+  recommended_action: "Para iadesini durdurmadan, dosyayı kanıt özetiyle manuel incelemeye alın.",
+  recommended_next_step: "Kanıt özetini kontrol et ve pazaryerine değerlendirme talebi ilet.",
+};
+
+const demoCases: CaseRecord[] = [
+  {
+    id: "GA-E4F71D",
+    product_name: "Trendyol / Elektronik / iPhone 15 Pro Max 256GB",
+    risk_score: 100,
+    status: "IN_REVIEW",
+    agent_data: demoResult,
+    image_urls: {},
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "GA-7A19C2",
+    product_name: "Hepsiburada / Kulaklık / Kablosuz kulaklık seti",
+    risk_score: 54,
+    status: "MANUAL_REVIEW",
+    agent_data: { ...demoResult, case_id: "GA-7A19C2", risk_score: 54, risk_level: "medium" },
+    image_urls: {},
+    created_at: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
+  },
+  {
+    id: "GA-31D90B",
+    product_name: "Amazon / Moda / Spor ayakkabı",
+    risk_score: 12,
+    status: "APPROVED",
+    agent_data: { ...demoResult, case_id: "GA-31D90B", risk_score: 12, risk_level: "low" },
+    image_urls: {},
+    created_at: new Date(Date.now() - 1000 * 60 * 94).toISOString(),
+  },
+];
+
+function getInitialView(): ActiveView {
+  if (typeof window === "undefined") return "dashboard";
+  const action = new URLSearchParams(window.location.search).get("action");
+  if (action === "cases") return "cases";
+  if (action === "new_case") return "new_case";
+  return "dashboard";
+}
+
+function getInitialDemoState() {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("action") === "demo";
+}
+
+function fileFromBase64(base64String: string, filename: string): File {
+  const [header, data] = base64String.split(",");
+  const mime = header.match(/:(.*?);/)?.[1] || "image/png";
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new File([bytes], filename, { type: mime });
+}
+
+function riskBadge(score: number) {
+  if (score >= 86) return "border-red-200 bg-red-50 text-red-700";
+  if (score >= 61) return "border-orange-200 bg-orange-50 text-orange-700";
+  if (score >= 26) return "border-amber-200 bg-amber-50 text-amber-700";
+  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+function NavButton({
+  active,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition ${
+        active ? "bg-white text-slate-950 shadow-sm" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+      }`}
+    >
+      <Icon className="h-4 w-4" />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function StepIndicator({ step }: { step: WizardStep }) {
+  const steps = [
+    { id: 1, label: "Vaka bilgisi" },
+    { id: 2, label: "Kanıt görselleri" },
+    { id: 3, label: "Ajan analizi" },
+  ];
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {steps.map((item) => (
+        <div
+          key={item.id}
+          className={`rounded-md border px-3 py-2 text-sm ${
+            step === item.id
+              ? "border-blue-500 bg-blue-50 text-blue-800"
+              : step > item.id
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-slate-200 bg-white text-slate-500"
+          }`}
+        >
+          <span className="mr-2 font-semibold">{item.id}</span>
+          {item.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EvidenceUpload({
+  title,
+  subtitle,
+  tone,
+  preview,
+  onUpload,
+}: {
+  title: string;
+  subtitle: string;
+  tone: "blue" | "amber";
+  preview: string | null;
+  onUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const accent = tone === "blue" ? "border-blue-300 bg-blue-50 text-blue-700" : "border-amber-300 bg-amber-50 text-amber-700";
+
+  return (
+    <label className="block">
+      <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+        <Upload className="h-4 w-4" />
+        {title}
+      </span>
+      <span className="mb-3 block text-xs text-slate-500">{subtitle}</span>
+      <div className={`relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border border-dashed ${accent}`}>
+        {preview ? (
+          <img src={preview} alt={title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="px-6 text-center">
+            <Upload className="mx-auto mb-3 h-8 w-8" />
+            <p className="text-sm font-semibold">Görsel seç</p>
+            <p className="mt-1 text-xs text-slate-500">PNG veya JPG</p>
+          </div>
+        )}
+        <input type="file" accept="image/*" className="absolute inset-0 cursor-pointer opacity-0" onChange={onUpload} />
+      </div>
+    </label>
+  );
+}
 
 export default function Dashboard() {
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const router = useRouter();
+  const [activeView, setActiveView] = useState<ActiveView>(getInitialView);
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
+  const [isDemoFetching, setIsDemoFetching] = useState(getInitialDemoState);
+  const [casesList, setCasesList] = useState<CaseRecord[]>(demoCases);
+  const [isFetchingCases, setIsFetchingCases] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  // Step 1: Case Context State
-  const [customerReason, setCustomerReason] = useState<string>("");
-  const [shortDescription, setShortDescription] = useState<string>("");
-  const [marketplace, setMarketplace] = useState<string>("");
-  const [productCategory, setProductCategory] = useState<string>("");
-  const [productValue, setProductValue] = useState<string>("");
-
-  // Step 2: Evidence State
+  const [customerReason, setCustomerReason] = useState("");
+  const [shortDescription, setShortDescription] = useState("");
+  const [marketplace, setMarketplace] = useState("");
+  const [productCategory, setProductCategory] = useState("");
+  const [productValue, setProductValue] = useState("");
+  const [referenceSource, setReferenceSource] = useState("Katalog görseli");
   const [originalImage, setOriginalImage] = useState<File | null>(null);
   const [returnedImage, setReturnedImage] = useState<File | null>(null);
   const [originalPreview, setOriginalPreview] = useState<string | null>(null);
   const [returnedPreview, setReturnedPreview] = useState<string | null>(null);
-  
-  // Step 3: Analysis State
-  const [loadingStep, setLoadingStep] = useState(0);
-  const loadingMessages = [
-    "Doğrulama vakası başlatılıyor...",
-    "Görsel ajanlar (Vision Agent) çalıştırılıyor...",
-    "Deliller çapraz sorgulanıyor (Verification)...",
-    "Operasyonel risk hesaplanıyor (Decision)...",
-    "İtiraz ve delil paketi oluşturuluyor (Resolution)..."
-  ];
-  
-  // Step 4: Result State
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalysisResponse | null>(null);
+
+  const displayedCases = casesList.length > 0 ? casesList : demoCases;
+
+  const stats = useMemo(() => {
+    const total = displayedCases.length;
+    const critical = displayedCases.filter((item) => item.risk_score >= 86).length;
+    const avgRisk = Math.round(displayedCases.reduce((sum, item) => sum + item.risk_score, 0) / Math.max(total, 1));
+    const valueAtRisk = "45.000 TL";
+    return { total, critical, avgRisk, valueAtRisk };
+  }, [displayedCases]);
+
+  const refreshCases = useCallback(async () => {
+    setIsFetchingCases(true);
+    try {
+      const data = await fetchCases();
+      setCasesList(data.length > 0 ? data : demoCases);
+    } catch {
+      setCasesList(demoCases);
+    } finally {
+      setIsFetchingCases(false);
+    }
+  }, []);
+
+  const openCases = () => {
+    setActiveView("cases");
+    void refreshCases();
+  };
+
+  const startNewCase = () => {
+    setActiveView("new_case");
+    setWizardStep(1);
+    setError(null);
+  };
+
+  const triggerDemoFetch = () => {
+    setIsDemoFetching(true);
+  };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (currentStep === 3) {
-      interval = setInterval(() => {
-        setLoadingStep((prev) => (prev < loadingMessages.length - 1 ? prev + 1 : prev));
-      }, 2500);
-    }
-    return () => clearInterval(interval);
-  }, [currentStep]);
+    if (!isDemoFetching) return undefined;
+    const timer = window.setTimeout(() => {
+      localStorage.setItem("guardian_analysis_result", JSON.stringify(demoResult));
+      localStorage.setItem("guardian_original_preview", "");
+      localStorage.setItem("guardian_returned_preview", "");
+      localStorage.setItem("guardian_reference_source", "Katalog görseli");
+      router.push("/results");
+    }, 1600);
+    return () => window.clearTimeout(timer);
+  }, [isDemoFetching, router]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: "original" | "returned") => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (type === "original") {
-        setOriginalImage(file);
-        setOriginalPreview(URL.createObjectURL(file));
-      } else {
-        setReturnedImage(file);
-        setReturnedPreview(URL.createObjectURL(file));
-      }
+  if (isDemoFetching) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-white">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg border border-blue-400/30 bg-blue-500/10">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-300" />
+          </div>
+          <h1 className="text-2xl font-semibold">Pazaryeri akışı taranıyor</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            Demo webhook senaryosu çalışıyor. Şüpheli iade vakası yakalanınca delil dosyasına yönlendirileceksiniz.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: "original" | "returned") => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (type === "original") {
+      setOriginalImage(file);
+      setOriginalPreview(URL.createObjectURL(file));
+    } else {
+      setReturnedImage(file);
+      setReturnedPreview(URL.createObjectURL(file));
     }
   };
 
-  const goToEvidence = () => {
-    setCurrentStep(2);
+  const viewCaseDetails = (caseRecord: CaseRecord) => {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace("/api/v1", "") : "http://localhost:8000";
+    const originalUrl = caseRecord.image_urls?.original ? `${API_BASE}${caseRecord.image_urls.original}` : "";
+    const returnedUrl = caseRecord.image_urls?.returned ? `${API_BASE}${caseRecord.image_urls.returned}` : "";
+
+    localStorage.setItem("guardian_analysis_result", JSON.stringify(caseRecord.agent_data || demoResult));
+    localStorage.setItem("guardian_original_preview", originalUrl);
+    localStorage.setItem("guardian_returned_preview", returnedUrl);
+    localStorage.setItem("guardian_reference_source", "Referans görsel");
+    router.push("/results");
   };
 
   const handleAnalyze = async () => {
-    if (!originalImage || !returnedImage) return;
-    setCurrentStep(3);
+    setWizardStep(3);
+    setIsAnalyzing(true);
     setLoadingStep(0);
     setError(null);
+
+    const progressTimer = window.setInterval(() => {
+      setLoadingStep((current) => Math.min(current + 1, loadingMessages.length - 1));
+    }, 900);
+
     try {
-      // Combine fields for the backend order_description
-      const combinedOrderDesc = `Pazaryeri: ${marketplace}. Kategori: ${productCategory}. Ürün: ${shortDescription}`;
-      
-      const data = await analyzeReturn(originalImage, returnedImage, combinedOrderDesc, customerReason, productValue);
-      setResult(data);
-      setCurrentStep(4);
-    } catch (err: any) {
-      setError(err.message || "Görseller analiz edilirken bir hata oluştu.");
-      setCurrentStep(2); // Go back to evidence on error
-    }
-  };
+      const placeholderBase64 =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+      const origFile = originalImage || fileFromBase64(placeholderBase64, "expected_catalog_reference.png");
+      const retFile = returnedImage || fileFromBase64(placeholderBase64, "actual_physical_evidence.png");
+      const combinedOrderDesc = `Pazaryeri: ${marketplace || "Demo"}. Kategori: ${productCategory || "Genel"}. Ürün: ${shortDescription || "Demo ürün"}. Referans kaynağı: ${referenceSource}.`;
 
-  const resetFlow = () => {
-    window.location.reload();
-  };
-
-  const downloadReport = () => {
-    if (!result) return;
-    const content = `# Vaka Raporu: ${result.case_id}\nDurum: ${result.case_status}\nRisk Skoru: ${result.risk_score}/100 (${result.risk_level})\nFinansal Etki: ${result.estimated_financial_impact}\n\n## Delil Özeti\n${result.evidence_summary}\n\n## Uyuşmazlıklar\n${result.mismatches.map(m => `- ${m.field}: Beklenen ${m.original_value}, Gerçekte Olan ${m.returned_value} (${m.severity})`).join('\n')}\n\n## İtiraz Raporu Özeti\n${result.dispute_report_summary}\n\nGuardianAI tarafından otonom olarak oluşturulmuştur.`;
-    const blob = new Blob([content], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${result.case_id}_Rapor.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "KRİTİK": return "text-red-500 bg-red-500/10 border-red-500/20";
-      case "YÜKSEK": return "text-orange-400 bg-orange-500/10 border-orange-500/20";
-      case "ORTA": return "text-yellow-400 bg-yellow-500/10 border-yellow-500/20";
-      default: return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-    }
-  };
-
-  const renderTrace = (trace: string) => {
-    const blocks = trace.split("\n\n");
-    return blocks.map((block, idx) => {
-      const [header, ...content] = block.split(":\n");
-      if (!content.length) return <div key={idx} className="text-zinc-400 my-1">{block}</div>;
-      return (
-        <div key={idx} className="mb-4 last:mb-0">
-          <div className="text-blue-400 text-xs font-bold mb-1 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-            {header}
-          </div>
-          <div className="text-zinc-300 border-l border-zinc-700/50 pl-3 ml-0.5 py-0.5 font-mono text-[13px]">
-            {content.join(":\n")}
-          </div>
-        </div>
+      const data = await analyzeReturn(
+        origFile,
+        retFile,
+        combinedOrderDesc,
+        customerReason || "Belirtilmedi",
+        productValue || "1000 TL",
       );
-    });
+
+      localStorage.setItem("guardian_analysis_result", JSON.stringify(data));
+      localStorage.setItem("guardian_original_preview", originalPreview || placeholderBase64);
+      localStorage.setItem("guardian_returned_preview", returnedPreview || placeholderBase64);
+      localStorage.setItem("guardian_reference_source", referenceSource);
+      router.push("/results");
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "Görseller analiz edilirken hata oluştu.";
+      setError(message);
+      setWizardStep(2);
+    } finally {
+      window.clearInterval(progressTimer);
+      setIsAnalyzing(false);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-200 font-sans selection:bg-blue-500/30 pb-12">
-      
-      {/* HEADER */}
-      <header className="border-b border-zinc-800/80 bg-[#09090b] sticky top-0 z-50">
-        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-blue-600 rounded-md">
-              <Shield className="w-5 h-5 text-white" />
+  const renderDashboard = () => (
+    <div className="mx-auto max-w-7xl min-w-0 space-y-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Human-in-the-loop iade doğrulama
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-lg font-bold text-zinc-100 leading-tight">GuardianAI</h1>
-              <p className="text-[10px] text-zinc-500 tracking-widest uppercase">Operasyon Platformu</p>
+            <h1 className="max-w-3xl text-3xl font-semibold tracking-normal text-slate-950">
+              Şüpheli iadeleri kanıt dosyasına çeviren operasyon paneli
+            </h1>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600">
+              GuardianAI, iade paketindeki ürünün sipariş kaydıyla görsel olarak uyuşup uyuşmadığını analiz eder. Sistem müşteriyi suçlamaz veya iadeyi tek başına reddetmez; operasyon ekibine öncelik, gerekçe, delil özeti ve pazaryeri aksiyon taslağı verir.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                onClick={startNewCase}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 sm:w-auto"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Yeni vaka başlat
+              </button>
+              <button
+                type="button"
+                onClick={triggerDemoFetch}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+              >
+                <Activity className="h-4 w-4" />
+                Demo taramayı çalıştır
+              </button>
             </div>
           </div>
-          <div className="text-sm text-zinc-400 flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-zinc-800">
-            <Search className="w-4 h-4" /> Vaka Ara
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase text-slate-500">Jüri demosu için ana mesaj</p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                15-20 dakikalık manuel iade incelemesini birkaç saniyelik kanıt hazırlama akışına indirir.
+              </p>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-xs font-semibold uppercase text-emerald-700">Güvenlik ilkesi</p>
+              <p className="mt-2 text-sm leading-6 text-emerald-800">
+                Nihai karar insanda kalır; AI sadece riskleri açıklar ve dosyayı hazırlanabilir hale getirir.
+              </p>
+            </div>
           </div>
         </div>
-      </header>
+      </section>
 
-      <main className="max-w-screen-2xl mx-auto px-4 lg:px-8 py-8 space-y-6">
+      <section className="grid gap-4 md:grid-cols-4">
+        {[
+          { label: "Bugünkü vaka", value: stats.total, icon: FolderOpen, tone: "text-blue-700 bg-blue-50 border-blue-200" },
+          { label: "Kritik öncelik", value: stats.critical, icon: AlertTriangle, tone: "text-red-700 bg-red-50 border-red-200" },
+          { label: "Ortalama risk", value: `${stats.avgRisk}/100`, icon: Gauge, tone: "text-amber-700 bg-amber-50 border-amber-200" },
+          { label: "Finansal risk", value: stats.valueAtRisk, icon: CircleDollarSign, tone: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+        ].map((item) => (
+          <div key={item.label} className={`rounded-lg border bg-white p-4 shadow-sm ${item.tone}`}>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase">{item.label}</p>
+              <item.icon className="h-4 w-4" />
+            </div>
+            <p className="text-2xl font-semibold text-slate-950">{item.value}</p>
+          </div>
+        ))}
+      </section>
 
-        {/* STEPPER NAVIGATION */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className="flex items-center justify-between relative">
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-px bg-zinc-800 z-0"></div>
-            
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h2 className="font-semibold text-slate-950">Öncelikli vaka kuyruğu</h2>
+              <p className="mt-1 text-xs text-slate-500">Risk skoru yüksek dosyalar ilk sırada ele alınır.</p>
+            </div>
+            <button type="button" onClick={openCases} className="text-sm font-semibold text-blue-700 hover:text-blue-900">
+              Tümünü aç
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Vaka</th>
+                  <th className="px-5 py-3 font-semibold">Ürün</th>
+                  <th className="px-5 py-3 font-semibold">Risk</th>
+                  <th className="px-5 py-3 font-semibold">Durum</th>
+                  <th className="px-5 py-3 font-semibold text-right">Aksiyon</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {displayedCases.slice(0, 4).map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-800">{item.id}</td>
+                    <td className="max-w-[280px] px-5 py-4 text-slate-600">{cleanText(item.product_name)}</td>
+                    <td className="px-5 py-4">
+                      <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${riskBadge(item.risk_score)}`}>
+                        {item.risk_score}/100
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-slate-600">{statusLabel(item.status)}</td>
+                    <td className="px-5 py-4 text-right">
+                      <button type="button" onClick={() => viewCaseDetails(item)} className="text-sm font-semibold text-blue-700 hover:text-blue-900">
+                        İncele
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="min-w-0 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="font-semibold text-slate-950">Ajan akışı</h2>
+          <p className="mt-1 text-xs text-slate-500">Demo sırasında anlatılacak teknik omurga.</p>
+          <div className="mt-5 space-y-4">
             {[
-              { num: 1, label: "VAKA BAŞLATMA" },
-              { num: 2, label: "DELİL TOPLAMA" },
-              { num: 3, label: "YAPAY ZEKA ANALİZİ" },
-              { num: 4, label: "VAKA ÇÖZÜMÜ" }
-            ].map((step) => (
-              <div key={step.num} className="relative z-10 flex flex-col items-center gap-2 bg-zinc-950 px-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  currentStep === step.num ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] ring-4 ring-zinc-950' : 
-                  currentStep > step.num ? 'bg-emerald-500 text-white ring-4 ring-zinc-950' : 
-                  'bg-zinc-800 text-zinc-500 ring-4 ring-zinc-950'
-                }`}>
-                  {currentStep > step.num ? <Check className="w-4 h-4" /> : step.num}
+              ["Vision Agent", "İki görselden ürün tipi, kondisyon, aksesuar ve hasar bulgularını çıkarır."],
+              ["Verification Agent", "Beklenen ürün ile dönen paketi kurallı ve semantik olarak karşılaştırır."],
+              ["Decision Agent", "Risk skoru, öncelik ve manuel inceleme gerekliliğini hesaplar."],
+              ["Resolution Agent", "Kanıt özeti, pazaryeri itiraz taslağı ve müşteri bilgilendirme metni üretir."],
+            ].map(([title, description], index) => (
+              <div key={title} className="flex gap-3">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-950 text-xs font-semibold text-white">
+                  {index + 1}
                 </div>
-                <span className={`text-[10px] font-bold tracking-wider ${currentStep >= step.num ? 'text-zinc-200' : 'text-zinc-600'}`}>
-                  {step.label}
-                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
+      </section>
+    </div>
+  );
 
-        {/* STEP 1: CASE INITIATION */}
-        {currentStep === 1 && (
-          <section className="bg-[#0c0c0e] border border-zinc-800 rounded-xl p-8 shadow-2xl max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4">
-            <div className="mb-8 border-b border-zinc-800 pb-4">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">1. Adım: Vaka Başlatma</h2>
-              <p className="text-zinc-400 mt-2 text-sm">Doğrulama sürecini başlatmak için iade edilen ürünün bağlam bilgilerini girin.</p>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5"><Store className="w-3.5 h-3.5"/> Satış Platformu (Pazaryeri)</label>
-                  <select 
-                    value={marketplace}
-                    onChange={(e) => setMarketplace(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-                  >
-                    <option value="">-- Seçiniz --</option>
-                    <option value="Amazon">Amazon</option>
-                    <option value="Trendyol">Trendyol</option>
-                    <option value="Hepsiburada">Hepsiburada</option>
-                    <option value="Shopify (Kendi Sitemiz)">Shopify (Kendi Sitemiz)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5"><Box className="w-3.5 h-3.5"/> Ürün Kategorisi</label>
-                  <select 
-                    value={productCategory}
-                    onChange={(e) => setProductCategory(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-                  >
-                    <option value="">-- Seçiniz --</option>
-                    <option value="Elektronik">Elektronik</option>
-                    <option value="Moda & Giyim">Moda & Giyim</option>
-                    <option value="Ev & Yaşam">Ev & Yaşam</option>
-                    <option value="Kozmetik">Kozmetik</option>
-                  </select>
-                </div>
-              </div>
+  const renderCases = () => (
+    <div className="mx-auto max-w-7xl min-w-0 space-y-5">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-950">Vaka yönetimi</h1>
+          <p className="mt-2 text-sm text-slate-600">Geçmiş analizler, demo vakaları ve operasyonel karar durumu.</p>
+        </div>
+        <button
+          type="button"
+          onClick={refreshCases}
+          className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          {isFetchingCases ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          Yenile
+        </button>
+      </div>
 
-              <div>
-                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5">Sipariş Kısa Açıklaması</label>
-                <input 
-                  type="text"
-                  value={shortDescription}
-                  onChange={(e) => setShortDescription(e.target.value)}
-                  placeholder="Örnek: iPhone 15 Pro Max 256GB Naturel Titanyum"
-                  className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder:text-zinc-700"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5"/> Müşteri İade Sebebi (Claim)</label>
-                  <select 
-                    value={customerReason}
-                    onChange={(e) => setCustomerReason(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-                  >
-                    <option value="">-- Sebep Seçin --</option>
-                    <option value="Ürün hasarlı geldi">Ürün hasarlı geldi</option>
-                    <option value="Yanlış ürün gönderildi">Yanlış ürün gönderildi</option>
-                    <option value="Aksesuar/Parça eksik">Aksesuar/Parça eksik</option>
-                    <option value="Beden uymadı / Rahatsız">Beden uymadı / Rahatsız</option>
-                    <option value="Fikrimi değiştirdim / Beklentimi karşılamadı">Fikrimi değiştirdim / Beklentimi karşılamadı</option>
-                    <option value="Ürün kusurlu / Çalışmıyor">Ürün kusurlu / Çalışmıyor</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5"><Tag className="w-3.5 h-3.5"/> Ürün Değeri (Finansal Risk)</label>
-                  <input 
-                    type="text"
-                    value={productValue}
-                    onChange={(e) => setProductValue(e.target.value)}
-                    placeholder="Örnek: 45000 TL"
-                    className="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder:text-zinc-700"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-10 flex justify-end">
-              <button onClick={goToEvidence} 
-                className="px-8 py-3 rounded-lg font-bold text-sm flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:scale-105">
-                Görsel Kanıt Yüklemeye Geç <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* STEP 2: EVIDENCE COLLECTION */}
-        {currentStep === 2 && (
-          <section className="bg-[#0c0c0e] border border-zinc-800 rounded-xl p-8 shadow-2xl max-w-4xl mx-auto animate-in fade-in slide-in-from-right-8">
-            <div className="mb-8 border-b border-zinc-800 pb-4">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">2. Adım: Delil Toplama (Evidence Collection)</h2>
-              <p className="text-zinc-400 mt-2 text-sm">GuardianAI, müşteri beyanlarını objektif görsel kanıtlarla doğrular. Lütfen karşılaştırma materyallerini yükleyin.</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-400"/> Orijinal Sipariş Görseli</label>
-                <div className="relative h-64 border-2 border-dashed border-zinc-700 hover:border-blue-500/50 rounded-xl bg-zinc-900/50 transition-colors flex items-center justify-center overflow-hidden group">
-                  {originalPreview ? (
-                    <img src={originalPreview} alt="Original" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-center"><Upload className="w-8 h-8 text-zinc-600 mx-auto mb-3 group-hover:text-blue-400 transition-colors" /><span className="text-sm font-medium text-zinc-500">Tıkla veya Sürükle</span></div>
-                  )}
-                  <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, "original")} />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-400"/> İade Edilen Ürün Görseli</label>
-                <div className="relative h-64 border-2 border-dashed border-zinc-700 hover:border-red-500/50 rounded-xl bg-zinc-900/50 transition-colors flex items-center justify-center overflow-hidden group">
-                  {returnedPreview ? (
-                    <img src={returnedPreview} alt="Returned" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-center"><Upload className="w-8 h-8 text-zinc-600 mx-auto mb-3 group-hover:text-red-400 transition-colors" /><span className="text-sm font-medium text-zinc-500">Tıkla veya Sürükle</span></div>
-                  )}
-                  <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handleImageUpload(e, "returned")} />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex justify-between items-center border-t border-zinc-800 pt-6">
-              <button onClick={() => setCurrentStep(1)} className="px-6 py-2.5 rounded-lg font-medium text-sm text-zinc-400 hover:text-white flex items-center gap-2 transition-colors border border-zinc-800 hover:bg-zinc-800">
-                <ChevronLeft className="w-4 h-4" /> Geri Dön
-              </button>
-              <button onClick={handleAnalyze} disabled={!originalImage || !returnedImage}
-                className={`px-8 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${(!originalImage || !returnedImage) ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105'}`}>
-                <Activity className="w-4 h-4" /> Yapay Zeka Analizini Başlat
-              </button>
-            </div>
-            {error && <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2"><AlertTriangle className="w-5 h-5" />{error}</div>}
-          </section>
-        )}
-
-        {/* STEP 3: AI ANALYSIS LOADING */}
-        {currentStep === 3 && (
-          <section className="bg-transparent max-w-2xl mx-auto mt-20 text-center animate-in zoom-in duration-500">
-            <div className="relative w-32 h-32 mx-auto mb-8">
-              <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
-              <Shield className="w-12 h-12 text-blue-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-6 tracking-tight">Otonom İnceleme Devam Ediyor</h2>
-            
-            <div className="space-y-4 max-w-md mx-auto text-left bg-zinc-900/50 p-6 rounded-xl border border-zinc-800/50 shadow-2xl">
-              {loadingMessages.map((msg, idx) => (
-                <div key={idx} className={`flex items-center gap-3 transition-all duration-500 ${idx <= loadingStep ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-                  {idx < loadingStep ? (
-                    <CheckCircle className="w-5 h-5 text-emerald-500" />
-                  ) : idx === loadingStep ? (
-                    <Activity className="w-5 h-5 text-blue-500 animate-spin" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border-2 border-zinc-700" />
-                  )}
-                  <span className={`text-sm font-medium ${idx < loadingStep ? 'text-zinc-400' : idx === loadingStep ? 'text-white' : 'text-zinc-600'}`}>{msg}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* STEP 4: CASE RESOLUTION (Result) */}
-        {currentStep === 4 && result && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-            
-            {/* TOP CASE HEADER */}
-            <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-              <div className="flex items-center gap-6">
-                <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Vaka Numarası</p>
-                  <h2 className="text-2xl font-mono font-bold text-white">{result.case_id}</h2>
-                </div>
-                <div className="h-10 w-px bg-zinc-800"></div>
-                <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Durum</p>
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span></span>
-                    <span className="text-sm font-semibold text-zinc-200">{result.case_status.replace(/_/g, ' ')}</span>
-                  </div>
-                </div>
-                <div className="h-10 w-px bg-zinc-800"></div>
-                <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Öncelik</p>
-                  <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getPriorityColor(result.case_priority)}`}>{result.case_priority}</span>
-                </div>
-                <div className="h-10 w-px bg-zinc-800"></div>
-                <div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Tahmini Zarar</p>
-                  <p className="text-sm font-bold text-zinc-300">{result.estimated_financial_impact}</p>
-                </div>
-              </div>
-              <div>
-                <button onClick={resetFlow} className="text-xs text-zinc-400 hover:text-white px-4 py-2 border border-zinc-800 rounded hover:bg-zinc-800 transition-colors font-medium">
-                  Yeni Vaka Başlat
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-              
-              {/* LEFT COLUMN: Evidence & Operations */}
-              <div className="xl:col-span-7 space-y-6">
-                
-                {/* Evidence Package */}
-                <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl overflow-hidden flex flex-col h-full shadow-lg">
-                  <div className="px-5 py-4 border-b border-zinc-800 bg-zinc-900/40 flex justify-between items-center">
-                    <h3 className="font-semibold text-white flex items-center gap-2"><FileText className="w-4 h-4 text-blue-400"/> Delil Dosyası</h3>
-                    <button onClick={downloadReport} className="text-xs font-bold flex items-center gap-1.5 text-blue-400 hover:text-blue-300 bg-blue-500/10 px-3 py-1.5 rounded-md transition-colors">
-                      <Download className="w-3.5 h-3.5" /> Raporu İndir
-                    </button>
-                  </div>
-                  <div className="p-5 space-y-6 flex-1">
-                    <div>
-                      <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-2">Delil Özeti</p>
-                      <p className="text-sm text-zinc-300 leading-relaxed bg-zinc-900/50 p-3.5 rounded-lg border border-zinc-800/50">{result.evidence_summary}</p>
-                    </div>
-                    
-                    {result.mismatches.length > 0 && (
-                      <div>
-                        <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-2">Tespit Edilen Anomaliler</p>
-                        <div className="rounded-lg border border-zinc-800 overflow-hidden">
-                          <table className="w-full text-sm text-left">
-                            <thead className="text-[10px] text-zinc-500 uppercase bg-zinc-900/80">
-                              <tr>
-                                <th className="px-4 py-2 font-medium">Alan</th>
-                                <th className="px-4 py-2 font-medium">Beklenen</th>
-                                <th className="px-4 py-2 font-medium">Gerçekte Olan</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-800">
-                              {result.mismatches.map((m, i) => (
-                                <tr key={i} className="bg-zinc-950/30">
-                                  <td className="px-4 py-3 font-medium text-zinc-300 capitalize flex items-center gap-2">
-                                    {m.severity === 'critical' && <XCircle className="w-3.5 h-3.5 text-red-500"/>}
-                                    {m.field.replace('_', ' ')}
-                                  </td>
-                                  <td className="px-4 py-3 text-zinc-500 truncate max-w-[150px]" title={m.original_value}>{m.original_value}</td>
-                                  <td className="px-4 py-3 text-red-400 font-medium truncate max-w-[150px]" title={m.returned_value}>{m.returned_value}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Generated Communications */}
-                    <div className="pt-4 border-t border-zinc-800">
-                      <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-4">Otonom İletişim Taslakları</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Marketplace Appeal */}
-                        <div className="bg-zinc-900/50 rounded-lg border border-zinc-800/50 p-4">
-                          <p className="text-xs font-bold text-blue-400 mb-2 flex items-center gap-1.5">
-                            <ShieldAlert className="w-3.5 h-3.5" /> Pazar Yeri İtiraz Dilekçesi
-                          </p>
-                          <div className="text-sm text-zinc-400 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 whitespace-pre-wrap">
-                            {result.marketplace_appeal_draft || result.dispute_report_summary}
-                          </div>
-                        </div>
-
-                        {/* Customer Response */}
-                        <div className="bg-zinc-900/50 rounded-lg border border-zinc-800/50 p-4">
-                          <p className="text-xs font-bold text-emerald-400 mb-2 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5" /> Müşteri Bilgilendirme Mesajı
-                          </p>
-                          <div className="text-sm text-zinc-400 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 whitespace-pre-wrap">
-                            {result.customer_response_draft || "İade işleminiz başarıyla onaylanmış ve standart iade politikamız kapsamında işleme alınmıştır."}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Center */}
-                <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl p-5 shadow-lg">
-                  <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-4">Aksiyon Merkezi - Önerilen Adım: <span className="text-white">{result.recommended_next_step}</span></p>
-                  <div className="flex gap-3">
-                    <button className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-lg">
-                      <CheckCircle className="w-4 h-4" /> İadeyi Onayla
-                    </button>
-                    <button className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 border border-zinc-700">
-                      <ShieldAlert className="w-4 h-4 text-orange-400" /> İncelemeye Al
-                    </button>
-                    <button className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-500 text-sm font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 border border-red-500/30">
-                      <XCircle className="w-4 h-4" /> İadeyi Bloke Et
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-              <div className="xl:col-span-5 space-y-6">
-                
-                {/* Risk Score Widget */}
-                <div className="bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-6 flex flex-col justify-center items-center relative overflow-hidden shadow-lg">
-                  <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500/50 to-transparent opacity-50" />
-                  <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-2">HESAPLANAN RİSK SKORU</p>
-                  <div className="flex items-baseline gap-1 mb-2">
-                    <span className={`text-6xl font-black ${
-                      result.risk_level === 'critical' ? 'text-red-500' :
-                      result.risk_level === 'high' ? 'text-orange-500' :
-                      result.risk_level === 'medium' ? 'text-yellow-500' : 'text-emerald-500'
-                    }`}>
-                      {result.risk_score}
-                    </span>
-                    <span className="text-xl font-bold text-zinc-600">/100</span>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full border text-[11px] font-bold tracking-widest uppercase mb-4 ${
-                      result.risk_level === 'critical' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                      result.risk_level === 'high' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                      result.risk_level === 'medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  }`}>
-                    {result.risk_level} RİSK
-                  </div>
-                  
-                  {/* Reason Codes */}
-                  {result.reason_codes && result.reason_codes.length > 0 && (
-                    <div className="flex flex-wrap gap-1 justify-center mt-2">
-                      {result.reason_codes.map((code, i) => (
-                        <span key={i} className="text-[9px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
-                          {code}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  <p className="text-[10px] text-zinc-500 mt-3 font-medium">% {(result.confidence * 100).toFixed(0)} Yapay Zeka Güveni</p>
-                  <ShieldAlert className="absolute -right-4 -bottom-4 w-32 h-32 text-zinc-800/20 rotate-12" />
-                </div>
-
-                {/* Automated Action Log */}
-                <div className="bg-[#0c0c0e] border border-zinc-800 rounded-xl p-5 shadow-lg">
-                  <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-4 flex items-center gap-2"><Clock className="w-3.5 h-3.5"/> Otomatik İşlem Geçmişi</p>
-                  <div className="space-y-3.5">
-                    {result.automated_action_log.map((log, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <div className="mt-0.5"><Check className="w-4 h-4 text-blue-500" /></div>
-                        <p className="text-sm text-zinc-300 font-medium">{log}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* AI Decision Trace (Terminal) */}
-                <div className="bg-black border border-zinc-800 rounded-xl overflow-hidden shadow-2xl">
-                  <div className="bg-zinc-900 px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-zinc-400" />
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Çoklu-Ajan Karar Analizi (Trace)</span>
-                  </div>
-                  <div className="p-5 h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800">
-                    {renderTrace(result.thought_trace)}
-                  </div>
-                </div>
-
-              </div>
-            </div>
+      <div className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
+        {isFetchingCases ? (
+          <div className="flex min-h-56 items-center justify-center text-sm text-slate-500">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Vakalar yükleniyor
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Case ID</th>
+                  <th className="px-5 py-3 font-semibold">Sipariş / ürün</th>
+                  <th className="px-5 py-3 font-semibold">Risk skoru</th>
+                  <th className="px-5 py-3 font-semibold">Durum</th>
+                  <th className="px-5 py-3 font-semibold">Tarih</th>
+                  <th className="px-5 py-3 font-semibold text-right">Detay</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {displayedCases.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-4 font-mono text-xs font-semibold text-slate-900">{item.id}</td>
+                    <td className="max-w-[360px] px-5 py-4 text-slate-600">{cleanText(item.product_name)}</td>
+                    <td className="px-5 py-4">
+                      <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${riskBadge(item.risk_score)}`}>
+                        {item.risk_score}/100
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-slate-600">{statusLabel(item.status)}</td>
+                    <td className="px-5 py-4 text-slate-500">{new Date(item.created_at).toLocaleString("tr-TR")}</td>
+                    <td className="px-5 py-4 text-right">
+                      <button type="button" onClick={() => viewCaseDetails(item)} className="font-semibold text-blue-700 hover:text-blue-900">
+                        Aç
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </main>
+      </div>
+    </div>
+  );
+
+  const renderNewCase = () => (
+    <div className="mx-auto max-w-5xl min-w-0 space-y-5">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-950">Manuel iade doğrulama</h1>
+        <p className="mt-2 text-sm text-slate-600">Sipariş bağlamını ve iki kanıt görselini verin; GuardianAI vaka dosyasını hazırlasın.</p>
+      </div>
+      <StepIndicator step={wizardStep} />
+
+      {wizardStep === 1 && (
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="grid gap-5 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                <Store className="h-4 w-4" />
+                Satış platformu
+              </span>
+              <select value={marketplace} onChange={(event) => setMarketplace(event.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                <option value="">Seçiniz</option>
+                <option value="Trendyol">Trendyol</option>
+                <option value="Hepsiburada">Hepsiburada</option>
+                <option value="Amazon">Amazon</option>
+                <option value="Shopify">Kendi e-ticaret sitesi</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                <Boxes className="h-4 w-4" />
+                Ürün kategorisi
+              </span>
+              <select value={productCategory} onChange={(event) => setProductCategory(event.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                <option value="">Seçiniz</option>
+                <option value="Elektronik">Elektronik</option>
+                <option value="Moda">Moda</option>
+                <option value="Ev ve yaşam">Ev ve yaşam</option>
+                <option value="Kozmetik">Kozmetik</option>
+              </select>
+            </label>
+
+            <label className="block md:col-span-2">
+              <span className="mb-2 block text-sm font-semibold text-slate-800">Sipariş kısa açıklaması</span>
+              <input value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} placeholder="Örn. iPhone 15 Pro Max 256GB Naturel Titanyum" className="w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-800">Müşteri iade sebebi</span>
+              <select value={customerReason} onChange={(event) => setCustomerReason(event.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                <option value="">Sebep seçin</option>
+                <option value="Ürün hasarlı geldi">Ürün hasarlı geldi</option>
+                <option value="Yanlış ürün gönderildi">Yanlış ürün gönderildi</option>
+                <option value="Aksesuar veya parça eksik">Aksesuar veya parça eksik</option>
+                <option value="Fikrimi değiştirdim">Fikrimi değiştirdim</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-800">Ürün değeri</span>
+              <input value={productValue} onChange={(event) => setProductValue(event.target.value)} placeholder="Örn. 45.000 TL" className="w-full rounded-md border border-slate-300 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+            </label>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button type="button" onClick={() => setWizardStep(2)} className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+              Kanıt görsellerine geç
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {wizardStep === 2 && (
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <label className="mb-5 block">
+            <span className="mb-2 block text-sm font-semibold text-slate-800">Referans görsel kaynağı</span>
+            <select value={referenceSource} onChange={(event) => setReferenceSource(event.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+              <option value="Katalog görseli">Pazaryeri katalog görseli</option>
+              <option value="Paketleme kamerası">Satıcı paketleme kamerası</option>
+              <option value="Müşteri kargo öncesi kanıtı">Müşteri kargo öncesi kanıtı</option>
+            </select>
+          </label>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <EvidenceUpload title="Beklenen ürün" subtitle="Sipariş, katalog veya çıkış anı görseli" tone="blue" preview={originalPreview} onUpload={(event) => handleImageUpload(event, "original")} />
+            <EvidenceUpload title="Depoya dönen ürün" subtitle="İade paketinden çıkan gerçek ürün" tone="amber" preview={returnedPreview} onUpload={(event) => handleImageUpload(event, "returned")} />
+          </div>
+
+          {error && (
+            <div className="mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-col-reverse justify-between gap-3 sm:flex-row">
+            <button type="button" onClick={() => setWizardStep(1)} className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <ChevronLeft className="h-4 w-4" />
+              Geri
+            </button>
+            <button type="button" onClick={handleAnalyze} className="inline-flex items-center justify-center gap-2 rounded-md bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800">
+              <Activity className="h-4 w-4" />
+              AI analizini başlat
+            </button>
+          </div>
+        </section>
+      )}
+
+      {wizardStep === 3 && (
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mx-auto max-w-xl text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+              {isAnalyzing ? <Loader2 className="h-7 w-7 animate-spin" /> : <CheckCircle2 className="h-7 w-7" />}
+            </div>
+            <h2 className="text-xl font-semibold text-slate-950">Ajan zinciri çalışıyor</h2>
+            <p className="mt-2 text-sm text-slate-600">Analiz tamamlandığında sonuç dosyasına yönlendirileceksiniz.</p>
+          </div>
+          <div className="mx-auto mt-6 max-w-2xl space-y-3">
+            {loadingMessages.map((message, index) => (
+              <div key={message} className={`flex items-center gap-3 rounded-md border px-4 py-3 text-sm ${index <= loadingStep ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-200 bg-slate-50 text-slate-400"}`}>
+                {index < loadingStep ? <CheckCircle2 className="h-4 w-4" /> : index === loadingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
+                {message}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <div className="flex min-h-screen">
+        <aside className="hidden w-68 shrink-0 flex-col bg-slate-950 p-4 text-white lg:flex">
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500 text-white">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-base font-semibold leading-none">GuardianAI</p>
+              <p className="mt-1 text-xs text-slate-400">Return verification ops</p>
+            </div>
+          </div>
+
+          <nav className="space-y-1">
+            <NavButton active={activeView === "dashboard"} icon={LayoutDashboard} label="Operasyon paneli" onClick={() => setActiveView("dashboard")} />
+            <NavButton active={activeView === "cases"} icon={FolderOpen} label="Vakalar" onClick={openCases} />
+            <NavButton active={activeView === "new_case"} icon={PlusCircle} label="Manuel doğrulama" onClick={startNewCase} />
+          </nav>
+
+          <div className="mt-6 border-t border-white/10 pt-4">
+            <button
+              type="button"
+              onClick={triggerDemoFetch}
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/10 hover:text-white"
+            >
+              <Activity className="h-4 w-4" />
+              Demo webhook taraması
+            </button>
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-400"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Finansal raporlar
+            </button>
+          </div>
+
+          <div className="mt-auto rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-50">
+            <div className="mb-2 flex items-center gap-2 font-semibold">
+              <PackageCheck className="h-4 w-4" />
+              Demo odağı
+            </div>
+            <p className="text-xs leading-5 text-emerald-100/80">
+              Otomatik ret değil, kanıta dayalı insan karar desteği.
+            </p>
+          </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button type="button" className="rounded-md border border-slate-300 p-2 text-slate-600 lg:hidden">
+                  <Menu className="h-5 w-5" />
+                </button>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-950 sm:text-lg">İade önceliklendirme ve kanıt yönetimi</h2>
+                </div>
+              </div>
+              <div className="hidden items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 md:flex">
+                <FileSearch className="h-4 w-4" />
+                <span>Case ID, sipariş veya ürün ara</span>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            {activeView === "dashboard" && renderDashboard()}
+            {activeView === "cases" && renderCases()}
+            {activeView === "new_case" && renderNewCase()}
+          </main>
+        </div>
+      </div>
     </div>
   );
 }
